@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useSampleForm } from "../../context/SampleFormContext";
 import FileDropzone from "../../components/FileDropzone";
 import { ChevronDown, ChevronUp, Plus, X, Trash2 } from "lucide-react";
@@ -23,8 +23,33 @@ const DEFAULT_ENZYMATIC = [
   "Alkane hydroxylase", "Manganese peroxidase (MnP)", "Laccase"
 ];
 
-/* ================= EMPTY RUN FACTORY ================= */
-const createRun = () => ({
+const PATHOGENS = [
+  "Methicillin-resistant Staphylococcus aureus", "Escherichia coli",
+  "P. aeruginosa", "B. subtilis", "Salmonella typhi", "Salmonella typhimurium",
+  "Acinetobacter baumannii", "Klebsiella pneumoniae",
+  "Aeromonas hydrophila", "Vibrio parahaemolyticus"
+];
+
+const METHODS = [
+  "Disk diffusion / Kirby bauer", "Agar Well diffusion",
+  "Agar plug diffusion", "Soft-agar overlay"
+];
+
+const ACTIVITY_LEVELS = ["Low", "Medium", "High"];
+const ANTIMALARIAL_OPTIONS = ["Plasmodium berghei", "Plasmodium falciparum"];
+
+/* ================= EMPTY RUN FACTORIES ================= */
+const createAntibacterialRun = () => ({
+  id: crypto.randomUUID(),
+  pathogen: "",
+  method: "",
+  activityLevel: "",
+  activityNotes: "",
+  antimalarialAssay: "",
+  notes: "",
+});
+
+const createTestRun = () => ({
   id: crypto.randomUUID(),
   notes: "",
   checked: [],
@@ -36,15 +61,18 @@ export default function Step3C_Misc() {
   const microTests = formData.microbiology?.microbiologyTests || {};
 
   /* ================= RUNS ================= */
+  const antibacterialRuns = microTests.antibacterialRuns?.length > 0
+    ? microTests.antibacterialRuns
+    : [createAntibacterialRun()];
+
   const biochemicalRuns = microTests.biochemicalRuns?.length > 0
     ? microTests.biochemicalRuns
-    : [createRun()];
+    : [createTestRun()];
 
   const enzymaticRuns = microTests.enzymaticRuns?.length > 0
     ? microTests.enzymaticRuns
-    : [createRun()];
+    : [createTestRun()];
 
-  const antibacterial = microTests.antibacterialAssay || {};
   const molecular = microTests.molecularIdentification || {};
 
   const [openAssay, setOpenAssay] = useState(true);
@@ -63,10 +91,32 @@ export default function Step3C_Misc() {
     });
   };
 
-  /* ================= RUN HANDLERS ================= */
+  /* ================= ANTIBACTERIAL RUN HANDLERS ================= */
+  const addAntibacterialRun = () => {
+    updateMicroTests({
+      antibacterialRuns: [...antibacterialRuns, createAntibacterialRun()]
+    });
+  };
+
+  const removeAntibacterialRun = (id) => {
+    if (antibacterialRuns.length <= 1) return;
+    updateMicroTests({
+      antibacterialRuns: antibacterialRuns.filter((r) => r.id !== id)
+    });
+  };
+
+  const updateAntibacterialRun = (id, field, value) => {
+    updateMicroTests({
+      antibacterialRuns: antibacterialRuns.map((r) =>
+        r.id === id ? { ...r, [field]: value } : r
+      )
+    });
+  };
+
+  /* ================= TEST RUN HANDLERS ================= */
   const addRun = (key) => {
-    const current = microTests[key] || [createRun()];
-    updateMicroTests({ [key]: [...current, createRun()] });
+    const current = microTests[key] || [createTestRun()];
+    updateMicroTests({ [key]: [...current, createTestRun()] });
   };
 
   const removeRun = (key, id) => {
@@ -82,7 +132,6 @@ export default function Step3C_Misc() {
     });
   };
 
-  /* ================= CHECKBOX HANDLERS ================= */
   const toggleCheck = (key, runId, testName) => {
     const current = microTests[key] || [];
     updateMicroTests({
@@ -96,7 +145,6 @@ export default function Step3C_Misc() {
     });
   };
 
-  /* ================= CUSTOM TEST HANDLERS ================= */
   const addCustomTest = (key, runId) => {
     const current = microTests[key] || [];
     updateMicroTests({
@@ -104,10 +152,7 @@ export default function Step3C_Misc() {
         if (r.id !== runId) return r;
         return {
           ...r,
-          customTests: [
-            ...(r.customTests || []),
-            { id: crypto.randomUUID(), name: "" }
-          ]
+          customTests: [...(r.customTests || []), { id: crypto.randomUUID(), name: "" }]
         };
       })
     });
@@ -118,10 +163,12 @@ export default function Step3C_Misc() {
     updateMicroTests({
       [key]: current.map((r) => {
         if (r.id !== runId) return r;
-        const customTests = r.customTests.map((t) =>
-          t.id === testId ? { ...t, name: value } : t
-        );
-        return { ...r, customTests };
+        return {
+          ...r,
+          customTests: r.customTests.map((t) =>
+            t.id === testId ? { ...t, name: value } : t
+          )
+        };
       })
     });
   };
@@ -131,10 +178,11 @@ export default function Step3C_Misc() {
     updateMicroTests({
       [key]: current.map((r) => {
         if (r.id !== runId) return r;
+        const removedName = r.customTests.find(t => t.id === testId)?.name;
         return {
           ...r,
           customTests: r.customTests.filter((t) => t.id !== testId),
-          checked: r.checked.filter((c) => c !== r.customTests.find(t => t.id === testId)?.name)
+          checked: r.checked.filter((c) => c !== removedName)
         };
       })
     });
@@ -159,39 +207,74 @@ export default function Step3C_Misc() {
 
       {/* ================= ANTIBACTERIAL ASSAY ================= */}
       <CollapsibleBox title="Antibacterial Assay" open={openAssay} setOpen={setOpenAssay}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Select label="Pathogen" value={antibacterial.pathogen || ""}
-            onChange={(e) => updateMicroTests({
-              antibacterialAssay: { ...antibacterial, pathogen: e.target.value }
-            })}
-            options={["", "Methicillin-resistant Staphylococcus aureus", "Escherichia coli",
-              "P. aeruginosa", "B. subtilis", "Salmonella typhi", "Salmonella typhimurium",
-              "Acinetobacter baumannii", "Klebsiella pneumoniae",
-              "Aeromonas hydrophila", "Vibrio parahaemolyticus"]} />
-          <Select label="Method" value={antibacterial.method || ""}
-            onChange={(e) => updateMicroTests({
-              antibacterialAssay: { ...antibacterial, method: e.target.value }
-            })}
-            options={["", "Disk diffusion / Kirby bauer", "Agar Well diffusion",
-              "Agar plug diffusion", "Soft-agar overlay"]} />
-          <Select label="Antibacterial Activity" value={antibacterial.activityLevel || ""}
-            onChange={(e) => updateMicroTests({
-              antibacterialAssay: { ...antibacterial, activityLevel: e.target.value }
-            })}
-            options={["", "Low", "Medium", "High"]} />
-        </div>
-        {antibacterial.activityLevel && (
-          <div className="mt-4">
-            <Input label="Activity Notes" value={antibacterial.activityNotes || ""}
-              onChange={(e) => updateMicroTests({
-                antibacterialAssay: { ...antibacterial, activityNotes: e.target.value }
-              })} />
-          </div>
-        )}
-        <div className="mt-4">
-          <Select label="Antimalarial Assay" value={microTests.antimalarialAssay || ""}
-            onChange={(e) => updateMicroTests({ antimalarialAssay: e.target.value })}
-            options={["", "Plasmodium berghei", "Plasmodium falciparum"]} />
+        <div className="space-y-4">
+          {antibacterialRuns.map((run, index) => (
+            <div key={run.id} className="border rounded-xl p-4 bg-gray-50 space-y-4">
+              {/* Run header */}
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-gray-700">Run #{index + 1}</h3>
+                {antibacterialRuns.length > 1 && (
+                  <button type="button"
+                    onClick={() => removeAntibacterialRun(run.id)}
+                    className="flex items-center gap-1 text-red-500 text-sm hover:text-red-700 transition">
+                    <Trash2 size={14} /> Remove
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Select
+                  label="Pathogen"
+                  value={run.pathogen || ""}
+                  onChange={(e) => updateAntibacterialRun(run.id, "pathogen", e.target.value)}
+                  options={["", ...PATHOGENS]}
+                />
+                <Select
+                  label="Method"
+                  value={run.method || ""}
+                  onChange={(e) => updateAntibacterialRun(run.id, "method", e.target.value)}
+                  options={["", ...METHODS]}
+                />
+                <Select
+                  label="Antibacterial Activity"
+                  value={run.activityLevel || ""}
+                  onChange={(e) => updateAntibacterialRun(run.id, "activityLevel", e.target.value)}
+                  options={["", ...ACTIVITY_LEVELS]}
+                />
+                <Select
+                  label="Antimalarial Assay"
+                  value={run.antimalarialAssay || ""}
+                  onChange={(e) => updateAntibacterialRun(run.id, "antimalarialAssay", e.target.value)}
+                  options={["", ...ANTIMALARIAL_OPTIONS]}
+                />
+              </div>
+
+              {run.activityLevel && (
+                <Input
+                  label="Activity Notes"
+                  value={run.activityNotes || ""}
+                  onChange={(e) => updateAntibacterialRun(run.id, "activityNotes", e.target.value)}
+                />
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Run Notes</label>
+                <textarea
+                  value={run.notes || ""}
+                  onChange={(e) => updateAntibacterialRun(run.id, "notes", e.target.value)}
+                  rows={2}
+                  placeholder="Notes for this run..."
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white"
+                />
+              </div>
+            </div>
+          ))}
+
+          <button type="button"
+            onClick={addAntibacterialRun}
+            className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+            <Plus size={14} /> Add Another Run
+          </button>
         </div>
       </CollapsibleBox>
 
@@ -327,7 +410,6 @@ function RunBlock({
 }) {
   return (
     <div className="border rounded-xl p-4 bg-gray-50 space-y-4">
-      {/* Run header */}
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-gray-700">Run #{index + 1}</h3>
         {canRemove && (
@@ -338,7 +420,6 @@ function RunBlock({
         )}
       </div>
 
-      {/* Default checkboxes */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         {defaultTests.map((test) => (
           <label key={test} className="flex items-center gap-3 text-sm cursor-pointer">
@@ -350,7 +431,6 @@ function RunBlock({
         ))}
       </div>
 
-      {/* Custom tests */}
       {run.customTests?.length > 0 && (
         <div className="space-y-2 pt-2 border-t">
           <p className="text-xs text-gray-500 font-medium">Custom tests:</p>
@@ -374,17 +454,13 @@ function RunBlock({
         </div>
       )}
 
-      {/* Add custom test */}
       <button type="button" onClick={onAddCustom}
         className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 transition">
         <Plus size={13} /> Add custom test
       </button>
 
-      {/* Notes */}
       <div>
-        <label className="block text-sm font-medium text-gray-600 mb-1">
-          Run Notes
-        </label>
+        <label className="block text-sm font-medium text-gray-600 mb-1">Run Notes</label>
         <textarea
           value={run.notes || ""}
           onChange={(e) => onNotesChange(e.target.value)}

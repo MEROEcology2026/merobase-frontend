@@ -1,175 +1,131 @@
-import React, {
+import {
   createContext,
   useContext,
   useEffect,
   useState
 } from "react";
+import { samplesAPI } from "../services/api";
 
 const SampleFormContext = createContext(null);
 
-export function SampleFormProvider({ children }) {
-  /* ================= INITIAL STRUCTURE ================= */
-  const initial = {
-    metadata: {
-      sampleId: "",
-      sampleName: "",
-      sampleType: "Biological",
-      projectType: "A",
-      projectNumber: "",
-      sampleNumber: "",
-      diveSite: "",
-      customDiveSite: "",
-      collectorName: "",
-      storageLocation: "Cool Room",
-      species: "",
-      genus: "",
-      family: "",
-      kingdom: "Undecided",
-      collectionDate: "",
-      latitude: "",
-      longitude: "",
-      samplePhoto: null,
-      samplePhotoName: ""
+/* ================= INITIAL STRUCTURE ================= */
+const initial = {
+  metadata: {
+    sampleId: "",
+    sampleName: "",
+    sampleType: "Biological",
+    projectType: "A",
+    projectNumber: "",
+    sampleNumber: "",
+    diveSite: "",
+    customDiveSite: "",
+    collectorName: "",
+    storageLocation: "Cool Room",
+    species: "",
+    genus: "",
+    family: "",
+    kingdom: "Undecided",
+    collectionDate: "",
+    latitude: "",
+    longitude: "",
+    samplePhoto: null,
+    samplePhotoName: ""
+  },
+  morphology: {
+    semPhotos: [],
+    microPhotos: [],
+    notes: "",
+  },
+  microbiology: {
+    primaryIsolated: {
+      isolatedId: "",
+      shelf: "",
+      positionInBox: "",
+      storageTemperature: "-20°C",
+      agarMedia: "",
+      solvent: "Aquades",
+      incubationTemperature: "",
+      incubationTime: "",
+      oxygenRequirement: "",
+      notes: ""
     },
-
-    morphology: {
-      semPhotos: [],
-      microPhotos: [],
-      petriPhoto: null,
-      gramPhoto: null,
-      notes: "",
-      isolatedDescription: {}
+    isolatedMorphology: {
+      macroscopic: { shape: "", arrangement: "", images: [] },
+      colonyDescription: {
+        shape: "", margin: "", elevation: "",
+        color: "", texture: "", motility: ""
+      },
+      microscopic: { shape: "", arrangement: "", gramReaction: "", images: [] }
     },
-
-    microbiology: {
-      primaryIsolated: {
-        isolatedId: "",
-        shelf: "",
-        positionInBox: "",
-        storageTemperature: "-20°C",
-        agarMedia: "",
-        solvent: "Aquades",
-        incubationTemperature: "",
-        incubationTime: "",
-        oxygenRequirement: "",
-        notes: ""
+    microbiologyTests: {
+      antibacterialAssay: {
+        pathogen: "", method: "", activityLevel: "", activityNotes: ""
       },
-
-      isolatedMorphology: {
-        isolatedImage: null,
-        macroscopic: {
-          shape: "",
-          arrangement: ""
-        },
-        colonyDescription: {
-          shape: "",
-          margin: "",
-          elevation: "",
-          color: "",
-          texture: "",
-          motility: ""
-        },
-        microscopicImage: null,
-        microscopic: {
-          shape: "",
-          arrangement: "",
-          gramReaction: ""
-        }
-      },
-
-      microbiologyTests: {
-        antibacterialAssay: {
-          pathogen: "",
-          method: "",
-          antimalarialAssay: "",
-          molecularId: "No"
-        },
-
-        biochemicalTests: {
-          catalase: false,
-          oxidase: false,
-          urease: false,
-          gelatinHydrolysis: false,
-          sulfideProduction: false,
-          nitrateReduction: false,
-          fermentation: false,
-          indole: false,
-          citrate: false
-        },
-
-        enzymaticTests: {
-          amylase: false,
-          protease: false,
-          lipase: false,
-          cellulase: false,
-          alkaneHydroxylase: false,
-          manganesePeroxidase: false,
-          laccase: false
-        },
-
-        testNotes: "",
-        rawSequenceFile: null,
-
-        hasMolecularID: false,
-        molecularIdentification: {
-          speciesName: "",
-          pcrPlatform: "",
-          pcrProtocolType: "",
-          sequencingMethod: "",
-          bioinformaticsPipeline: "",
-          accessionStatus: "Unpublished",
-          accessionNumber: ""
-        }
+      antimalarialAssay: "",
+      biochemicalTests: [],
+      enzymaticTests: [],
+      testNotes: "",
+      molecularIdentification: {
+        hasIdentification: false,
+        speciesName: "",
+        pcrPlatform: "",
+        pcrProtocolType: "",
+        sequencingMethod: "",
+        bioinformaticsPipeline: "",
+        accessionStatus: "Unpublished",
+        accessionNumber: "",
+        rawSequenceFile: null
       }
-    },
-
-    molecular: {
-      gelImage: null,
-      rawSequenceFiles: [],
-      markerGene: "",
-      dnaSource: "",
-      extractionKit: "",
-      extractionMethod: "",
-      primerSet: { forward: "", reverse: "" },
-      pcrMethod: "",
-      pcrProtocolType: "",
-      sequencingMethod: "",
-      sequencingQuality: "",
-      bioinformaticsPipeline: "",
-      accessionStatus: "",
-      accessionNumber: "",
-      dnaConcentrationRange: "",
-      phylogeneticNotes: ""
-    },
-
-    publication: {
-      links: [""]
     }
-  };
+  },
+  molecular: {
+    gelImage: null,
+    rawSequenceFiles: [],
+    dnaSource: "",
+    extractionKit: "",
+    extractionMethod: "",
+    pcrMethod: "",
+    sequencingMethod: "",
+    sequencingQuality: "",
+    bioinformaticsPipeline: "",
+    dnaConcentrationRange: "",
+    phylogeneticNotes: "",
+    markers: [
+      {
+        id: crypto.randomUUID(),
+        markerGene: "",
+        primerForward: "",
+        primerReverse: "",
+        pcrProtocolType: "",
+        accessionStatus: "",
+        accessionNumber: ""
+      }
+    ]
+  },
+  publication: {
+    links: []
+  }
+};
 
-  /* ================= MODE ================= */
+export function SampleFormProvider({ children }) {
   const [mode, setMode] = useState("add");
   const [editingSampleId, setEditingSampleId] = useState(null);
 
-  /* ================= FORM STATE ================= */
   const [formData, setFormData] = useState(() => {
     try {
-      const raw = localStorage.getItem("merobase_addsample_draft");
+      const raw = localStorage.getItem("merobase_draft");
       return raw ? JSON.parse(raw) : initial;
     } catch {
       return initial;
     }
   });
 
-  /* ================= AUTOSAVE (WITH IMAGES) ================= */
+  /* ================= AUTOSAVE ================= */
   useEffect(() => {
     try {
-      localStorage.setItem(
-        "merobase_addsample_draft",
-        JSON.stringify(formData)
-      );
+      localStorage.setItem("merobase_draft", JSON.stringify(formData));
     } catch (err) {
-      console.warn("Autosave skipped (storage limit)", err);
+      console.warn("Autosave skipped:", err);
     }
   }, [formData]);
 
@@ -185,10 +141,7 @@ export function SampleFormProvider({ children }) {
   };
 
   const setSection = (section, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [section]: value
-    }));
+    setFormData(prev => ({ ...prev, [section]: value }));
   };
 
   /* ================= EDIT MODE ================= */
@@ -197,7 +150,6 @@ export function SampleFormProvider({ children }) {
       console.error("Invalid sample for edit");
       return;
     }
-
     setMode("edit");
     setEditingSampleId(sample.metadata.sampleId);
     setFormData(sample);
@@ -210,56 +162,48 @@ export function SampleFormProvider({ children }) {
 
   /* ================= CLEAR ================= */
   const clearDraftOnly = () => {
-    localStorage.removeItem("merobase_addsample_draft");
+    localStorage.removeItem("merobase_draft");
     setFormData(initial);
+    setMode("add");
+    setEditingSampleId(null);
   };
 
-  /* ================= SUBMIT (IMAGES KEPT) ================= */
-  const submitSampleToLocalStorage = () => {
-    let samples = [];
+  /* ================= SUBMIT TO API ================= */
+  const submitSample = async () => {
+    const { metadata, morphology, microbiology, molecular, publication } = formData;
 
-    try {
-      samples =
-        JSON.parse(localStorage.getItem("merobase_samples")) || [];
-    } catch {
-      samples = [];
-    }
+    const payload = {
+      sample_id: metadata.sampleId || `SAMPLE-${Date.now()}`,
+      sample_name: metadata.sampleName,
+      sample_type: metadata.sampleType,
+      project_type: metadata.projectType,
+      project_number: metadata.projectNumber,
+      sample_number: metadata.sampleNumber,
+      dive_site: metadata.diveSite,
+      collector_name: metadata.collectorName,
+      collection_date: metadata.collectionDate || null,
+      latitude: metadata.latitude || null,
+      longitude: metadata.longitude || null,
+      storage_location: metadata.storageLocation,
+      kingdom: metadata.kingdom,
+      genus: metadata.genus,
+      family: metadata.family,
+      species: metadata.species,
+      depth: metadata.depth || null,
+      temperature: metadata.temperature || null,
+      substrate: metadata.substrate,
+      sample_length: metadata.sampleLength || null,
+      morphology,
+      microbiology,
+      molecular,
+      publication
+    };
 
     if (mode === "edit") {
-      const index = samples.findIndex(
-        s => s.metadata?.sampleId === editingSampleId
-      );
-
-      if (index === -1) {
-        alert("Edit failed: sample not found");
-        return;
-      }
-
-      samples[index] = {
-        ...formData,
-        metadata: {
-          ...formData.metadata,
-          sampleId: editingSampleId
-        },
-        lastEdited: new Date().toISOString()
-      };
+      await samplesAPI.update(editingSampleId, payload);
     } else {
-      samples.unshift({
-        ...formData,
-        metadata: {
-          ...formData.metadata,
-          sampleId:
-            formData.metadata.sampleId ||
-            `SAMPLE-${Date.now()}`
-        },
-        createdAt: new Date().toISOString()
-      });
+      await samplesAPI.create(payload);
     }
-
-    localStorage.setItem(
-      "merobase_samples",
-      JSON.stringify(samples)
-    );
 
     clearDraftOnly();
   };
@@ -275,9 +219,11 @@ export function SampleFormProvider({ children }) {
         mode,
         editingSampleId,
         loadSampleForEdit,
-        submitSampleToLocalStorage,
+        submitSample,
         clearDraftOnly,
-        exitEditMode
+        exitEditMode,
+        // Keep old name as alias so old code doesn't break yet
+        submitSampleToLocalStorage: submitSample,
       }}
     >
       {children}
@@ -289,9 +235,7 @@ export function SampleFormProvider({ children }) {
 export const useSampleFormContext = () => {
   const ctx = useContext(SampleFormContext);
   if (!ctx) {
-    throw new Error(
-      "useSampleFormContext must be used inside SampleFormProvider"
-    );
+    throw new Error("useSampleFormContext must be used inside SampleFormProvider");
   }
   return ctx;
 };

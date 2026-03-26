@@ -1,21 +1,19 @@
-// src/pages/addsample/Step3A_PrimaryIsolated.jsx
-import React, { useState } from "react";
+import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { useSampleForm } from "../../context/SampleFormContext";
 
 export default function Step3A_PrimaryIsolated() {
   const { formData, updateSection } = useSampleForm();
 
-  const data =
-    formData.microbiology?.primaryIsolatedData || {};
-
+  /* ✅ FIXED: primaryIsolatedData → primaryIsolated */
+  const data = formData.microbiology?.primaryIsolated || {};
   const [open, setOpen] = useState(true);
 
   /* ================= HANDLERS ================= */
   const update = (field, value) => {
     updateSection("microbiology", {
       ...formData.microbiology,
-      primaryIsolatedData: {
+      primaryIsolated: {
         ...data,
         [field]: value,
       },
@@ -24,14 +22,11 @@ export default function Step3A_PrimaryIsolated() {
 
   return (
     <div className="space-y-6">
-      {/* ================= PAGE TITLE ================= */}
       <h1 className="text-2xl font-bold text-gray-800">
         Microbiology - Primary Isolated Data
       </h1>
 
-      {/* ================= COLLAPSIBLE BOX ================= */}
       <div className="border rounded-2xl shadow-sm bg-white">
-        {/* Header */}
         <button
           type="button"
           onClick={() => setOpen(!open)}
@@ -40,129 +35,55 @@ export default function Step3A_PrimaryIsolated() {
           <h2 className="text-lg font-semibold text-gray-700">
             Primary Isolated Information
           </h2>
-          <ChevronDown
-            className={`transition-transform ${
-              open ? "rotate-180" : ""
-            }`}
-          />
+          <ChevronDown className={`transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
 
-        {/* Content */}
         {open && (
           <div className="p-6 space-y-6">
-            {/* ================= GRID ================= */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* Isolated ID */}
-              <Field
-                label="Isolated ID"
-                value={data.isolatedId}
-                onChange={(e) =>
-                  update("isolatedId", e.target.value)
-                }
-                placeholder="e.g. ISO-001"
-              />
+              <Field label="Isolated ID" value={data.isolatedId}
+                onChange={(e) => update("isolatedId", e.target.value)}
+                placeholder="e.g. ISO-001" />
 
-              {/* Shelf */}
-              <Field
-                label="Shelf"
-                value={data.shelf}
-                onChange={(e) =>
-                  update("shelf", e.target.value)
-                }
-                placeholder="e.g. Shelf A"
-              />
+              <Field label="Shelf" value={data.shelf}
+                onChange={(e) => update("shelf", e.target.value)}
+                placeholder="e.g. Shelf A" />
 
-              {/* Position */}
-              <Field
-                label="Position in Box"
-                value={data.position}
-                onChange={(e) =>
-                  update("position", e.target.value)
-                }
-                placeholder="e.g. A3"
-              />
+              {/* ✅ FIXED: position → positionInBox */}
+              <Field label="Position in Box" value={data.positionInBox}
+                onChange={(e) => update("positionInBox", e.target.value)}
+                placeholder="e.g. A3" />
 
-              {/* Storage Temperature */}
-              <Select
-                label="Storage Temperature"
-                value={data.storageTemperature}
-                onChange={(e) =>
-                  update("storageTemperature", e.target.value)
-                }
-                options={["", "-20 °C", "-80 °C"]}
-              />
+              <Select label="Storage Temperature" value={data.storageTemperature}
+                onChange={(e) => update("storageTemperature", e.target.value)}
+                options={["", "-20 °C", "-80 °C"]} />
 
-              {/* Agar Media */}
-              <Field
-                label="Agar Media"
-                value={data.agarMedia}
-                onChange={(e) =>
-                  update("agarMedia", e.target.value)
-                }
-                placeholder="e.g. Marine Agar"
-              />
+              <Field label="Agar Media" value={data.agarMedia}
+                onChange={(e) => update("agarMedia", e.target.value)}
+                placeholder="e.g. Marine Agar" />
 
-              {/* Solvent */}
-              <Select
-                label="Solvent"
-                value={data.solvent}
-                onChange={(e) =>
-                  update("solvent", e.target.value)
-                }
-                options={[
-                  "",
-                  "Aquades",
-                  "Seawater 70% : Aquades 30%",
-                ]}
-              />
+              <Select label="Solvent" value={data.solvent}
+                onChange={(e) => update("solvent", e.target.value)}
+                options={["", "Aquades", "Seawater 70% : Aquades 30%"]} />
 
-              {/* Incubation Temperature */}
-              <Field
-                label="Incubation Temperature"
-                value={data.incubationTemperature}
-                onChange={(e) =>
-                  update(
-                    "incubationTemperature",
-                    e.target.value
-                  )
-                }
-                placeholder="e.g. 28 °C"
-              />
+              <Field label="Incubation Temperature" value={data.incubationTemperature}
+                onChange={(e) => update("incubationTemperature", e.target.value)}
+                placeholder="e.g. 28 °C" />
 
-              {/* Incubation Time */}
-              <Field
-                label="Incubation Time"
-                value={data.incubationTime}
-                onChange={(e) =>
-                  update("incubationTime", e.target.value)
-                }
-                placeholder="e.g. 48 hours"
-              />
+              <Field label="Incubation Time" value={data.incubationTime}
+                onChange={(e) => update("incubationTime", e.target.value)}
+                placeholder="e.g. 48 hours" />
 
-              {/* Oxygen Requirement */}
-              <Field
-                label="Oxygen Requirement"
-                value={data.oxygenRequirement}
-                onChange={(e) =>
-                  update(
-                    "oxygenRequirement",
-                    e.target.value
-                  )
-                }
-                placeholder="e.g. Aerobic / Anaerobic"
-              />
+              <Field label="Oxygen Requirement" value={data.oxygenRequirement}
+                onChange={(e) => update("oxygenRequirement", e.target.value)}
+                placeholder="e.g. Aerobic / Anaerobic" />
             </div>
 
-            {/* Notes */}
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">
-                Notes
-              </label>
+              <label className="block text-sm font-medium text-gray-600 mb-1">Notes</label>
               <textarea
-                value={data.notes}
-                onChange={(e) =>
-                  update("notes", e.target.value)
-                }
+                value={data.notes || ""}
+                onChange={(e) => update("notes", e.target.value)}
                 rows={4}
                 placeholder="Additional storage or isolation notes"
                 className="w-full rounded-lg border border-gray-300 p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -175,14 +96,10 @@ export default function Step3A_PrimaryIsolated() {
   );
 }
 
-/* ================= REUSABLE COMPONENTS ================= */
-
 function Field({ label, value, onChange, placeholder }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-600 mb-1">
-        {label}
-      </label>
+      <label className="block text-sm font-medium text-gray-600 mb-1">{label}</label>
       <input
         type="text"
         value={value || ""}
@@ -197,18 +114,14 @@ function Field({ label, value, onChange, placeholder }) {
 function Select({ label, value, onChange, options }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-600 mb-1">
-        {label}
-      </label>
+      <label className="block text-sm font-medium text-gray-600 mb-1">{label}</label>
       <select
         value={value || ""}
         onChange={onChange}
         className="w-full rounded-lg border border-gray-300 p-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
       >
         {options.map((opt) => (
-          <option key={opt} value={opt}>
-            {opt || "Select option"}
-          </option>
+          <option key={opt} value={opt}>{opt || "Select option"}</option>
         ))}
       </select>
     </div>

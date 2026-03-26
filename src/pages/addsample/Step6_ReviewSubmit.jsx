@@ -1,22 +1,17 @@
-// src/pages/addsample/Step6_ReviewSubmit.jsx
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSampleFormContext } from "../../context/SampleFormContext";
 
 /* ================= PROGRESS BAR ================= */
-
 const ProgressBar = ({ label, percent }) => (
   <div className="mb-5">
     <div className="flex justify-between text-sm font-medium mb-1">
       <span>{label}</span>
       <span>{percent}%</span>
     </div>
-
     <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
       <div
-        className={`h-full transition-all duration-300 ${
-          percent === 100 ? "bg-green-500" : "bg-blue-600"
-        }`}
+        className={`h-full transition-all duration-300 ${percent === 100 ? "bg-green-500" : "bg-blue-600"}`}
         style={{ width: `${percent}%` }}
       />
     </div>
@@ -24,79 +19,75 @@ const ProgressBar = ({ label, percent }) => (
 );
 
 /* ================= PROGRESS CALC ================= */
-
+/* ✅ FIXED: flatten nested objects for accurate progress */
 const calculateProgress = (section) => {
   if (!section || typeof section !== "object") return 0;
 
-  const values = Object.values(section);
-  if (values.length === 0) return 0;
+  const flatValues = [];
+  const flatten = (obj) => {
+    Object.values(obj).forEach((v) => {
+      if (Array.isArray(v)) {
+        flatValues.push(v.length > 0 ? "filled" : "");
+      } else if (v && typeof v === "object") {
+        flatten(v);
+      } else {
+        flatValues.push(v);
+      }
+    });
+  };
+  flatten(section);
 
-  const filled = values.filter((v) => {
-    if (Array.isArray(v)) return v.length > 0;
-    if (typeof v === "object" && v !== null)
-      return Object.values(v).some((x) => x !== "" && x !== null);
-    return v !== "" && v !== null;
-  }).length;
-
-  return Math.round((filled / values.length) * 100);
+  if (flatValues.length === 0) return 0;
+  const filled = flatValues.filter((v) => v !== "" && v !== null && v !== false && v !== undefined).length;
+  return Math.round((filled / flatValues.length) * 100);
 };
 
 /* ================= COMPONENT ================= */
-
 export default function Step6_ReviewSubmit() {
   const navigate = useNavigate();
-
-  const {
-    formData,
-    mode,
-    submitSampleToLocalStorage
-  } = useSampleFormContext();
+  const { formData, mode, submitSample } = useSampleFormContext();
 
   const [submitting, setSubmitting] = useState(false);
-  const [popup, setPopup] = useState(null); // success | error
+  const [popup, setPopup] = useState(null);
 
-  /* ===== Progress ===== */
-  const progress = useMemo(
-    () => ({
-      metadata: calculateProgress(formData.metadata),
-      morphology: calculateProgress(formData.morphology),
-      microbiology: calculateProgress(formData.microbiology),
-      molecular: calculateProgress(formData.molecular),
-      publication: calculateProgress(formData.publication)
-    }),
-    [formData]
-  );
+  /* ================= SAMPLE PREVIEW ================= */
+  const meta = formData.metadata || {};
 
-  /* ===== Submit Handler ===== */
+  /* ================= PROGRESS ================= */
+  const progress = useMemo(() => ({
+    metadata: calculateProgress(formData.metadata),
+    morphology: calculateProgress(formData.morphology),
+    microbiology: calculateProgress(formData.microbiology),
+    molecular: calculateProgress(formData.molecular),
+    publication: calculateProgress(formData.publication)
+  }), [formData]);
+
+  /* ================= SUBMIT ================= */
   const handleSubmit = async () => {
+    if (!meta.sampleName) {
+      setPopup({ type: "error", message: "Sample name is required before submitting." });
+      return;
+    }
+
     try {
       setSubmitting(true);
-
-      submitSampleToLocalStorage();
-
+      /* ✅ FIXED: calls real API via submitSample */
+      await submitSample();
       setPopup({
         type: "success",
-        message:
-          mode === "edit"
-            ? "Sample successfully updated"
-            : "Sample successfully registered"
+        message: mode === "edit" ? "Sample successfully updated!" : "Sample successfully registered!"
       });
-
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 1500);
+      setTimeout(() => navigate("/dashboard"), 1500);
     } catch (err) {
       console.error("Submit failed:", err);
       setPopup({
         type: "error",
-        message: "Failed to save sample. Please try again."
+        message: err?.response?.data?.message || "Failed to save sample. Please try again."
       });
     } finally {
       setSubmitting(false);
     }
   };
-
-  /* ================= UI ================= */
 
   return (
     <div className="relative max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-8">
@@ -104,36 +95,30 @@ export default function Step6_ReviewSubmit() {
         Review & Submit Sample
       </h2>
 
-      <p className="text-sm text-gray-500 text-center mb-8">
-        {mode === "edit"
-          ? "You are updating an existing sample"
-          : "You are registering a new sample"}{" "}
-        — <strong>localStorage only</strong>
+      <p className="text-sm text-gray-500 text-center mb-6">
+        {mode === "edit" ? "Updating an existing sample" : "Registering a new sample"}
       </p>
 
-      {/* Progress Overview */}
-      <ProgressBar
-        label="Metadata Completion"
-        percent={progress.metadata}
-      />
-      <ProgressBar
-        label="Morphology Completion"
-        percent={progress.morphology}
-      />
-      <ProgressBar
-        label="Microbiology Completion"
-        percent={progress.microbiology}
-      />
-      <ProgressBar
-        label="Molecular Completion"
-        percent={progress.molecular}
-      />
-      <ProgressBar
-        label="Publication Completion"
-        percent={progress.publication}
-      />
+      {/* ================= SAMPLE PREVIEW ================= */}
+      <div className="bg-gray-50 rounded-xl p-4 mb-6 text-sm space-y-1">
+        <p><span className="font-medium">Sample Name:</span> {meta.sampleName || "—"}</p>
+        <p><span className="font-medium">Sample Type:</span> {meta.sampleType || "—"}</p>
+        <p><span className="font-medium">Kingdom:</span> {meta.kingdom || "—"}</p>
+        <p><span className="font-medium">Species:</span> {meta.species || "—"}</p>
+        <p><span className="font-medium">Collector:</span> {meta.collectorName || "—"}</p>
+        <p><span className="font-medium">Collection Date:</span> {meta.collectionDate || "—"}</p>
+        <p><span className="font-medium">Dive Site:</span> {meta.diveSite || "—"}</p>
+        <p><span className="font-medium">Project Type:</span> {meta.projectType || "—"}</p>
+      </div>
 
-      {/* Submit Button */}
+      {/* ================= PROGRESS ================= */}
+      <ProgressBar label="Metadata Completion" percent={progress.metadata} />
+      <ProgressBar label="Morphology Completion" percent={progress.morphology} />
+      <ProgressBar label="Microbiology Completion" percent={progress.microbiology} />
+      <ProgressBar label="Molecular Completion" percent={progress.molecular} />
+      <ProgressBar label="Publication Completion" percent={progress.publication} />
+
+      {/* ================= SUBMIT BUTTON ================= */}
       <button
         onClick={handleSubmit}
         disabled={submitting}
@@ -145,30 +130,24 @@ export default function Step6_ReviewSubmit() {
             : "bg-blue-600 hover:bg-blue-700"
         }`}
       >
-        {submitting
-          ? "Saving..."
-          : mode === "edit"
-          ? "Update Sample"
-          : "Submit Sample"}
+        {submitting ? "Saving..." : mode === "edit" ? "Update Sample" : "Submit Sample"}
       </button>
-
-      <p className="mt-4 text-xs text-gray-400 text-center">
-        Demo mode — data stored locally for presentation purposes
-      </p>
 
       {/* ================= POPUP ================= */}
       {popup && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-2xl">
-          <div
-            className={`px-6 py-4 rounded-xl shadow-lg text-white ${
-              popup.type === "success"
-                ? "bg-green-600"
-                : "bg-red-600"
-            }`}
-          >
-            <p className="font-semibold text-center">
-              {popup.message}
-            </p>
+          <div className={`px-6 py-4 rounded-xl shadow-lg text-white max-w-sm text-center ${
+            popup.type === "success" ? "bg-green-600" : "bg-red-600"
+          }`}>
+            <p className="font-semibold">{popup.message}</p>
+            {popup.type === "error" && (
+              <button
+                onClick={() => setPopup(null)}
+                className="mt-3 text-sm underline opacity-80"
+              >
+                Dismiss
+              </button>
+            )}
           </div>
         </div>
       )}

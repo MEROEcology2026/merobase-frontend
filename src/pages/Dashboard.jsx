@@ -18,7 +18,6 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(true);
 
-  /* ================= LOAD FROM API ================= */
   useEffect(() => {
     const fetchSamples = async () => {
       try {
@@ -34,29 +33,17 @@ export default function Dashboard() {
     fetchSamples();
   }, []);
 
-  /* ================= LOGOUT ================= */
   const handleLogout = () => {
     localStorage.removeItem("merobase_token");
     localStorage.removeItem("merobase_user");
     navigate("/");
   };
 
-  /* ================= KPI ================= */
   const totalSamples = samples.length;
+  const totalProjects = new Set(samples.map((s) => s.project_type).filter(Boolean)).size;
+  const totalKingdoms = new Set(samples.map((s) => s.kingdom).filter(Boolean)).size;
+  const totalSpecies = new Set(samples.map((s) => s.species).filter(Boolean)).size;
 
-  const totalProjects = new Set(
-    samples.map((s) => s.project_type).filter(Boolean)
-  ).size;
-
-  const totalKingdoms = new Set(
-    samples.map((s) => s.kingdom).filter(Boolean)
-  ).size;
-
-  const totalSpecies = new Set(
-    samples.map((s) => s.species).filter(Boolean)
-  ).size;
-
-  /* ================= LATEST ================= */
   const latestRegistered = useMemo(() => {
     return [...samples]
       .filter((s) => s.created_at)
@@ -69,7 +56,6 @@ export default function Dashboard() {
       .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))[0];
   }, [samples]);
 
-  /* ================= ANALYTICS ================= */
   const kingdomData = useMemo(() => {
     const acc = {};
     samples.forEach((s) => {
@@ -100,7 +86,6 @@ export default function Dashboard() {
       .map(([date, value]) => ({ date, value }));
   }, [samples]);
 
-  /* ================= UI ================= */
   return (
     <div className="flex min-h-screen bg-gray-100 font-sans">
       {/* ========== SIDEBAR ========== */}
@@ -202,9 +187,124 @@ export default function Dashboard() {
                 )}
               </ChartBox>
             </div>
+
+            {/* ================= SYSTEM STATUS ================= */}
+            <div className="mt-8">
+              <h2 className="text-lg font-semibold mb-4">System Status</h2>
+              <StatusPanel />
+            </div>
           </>
         )}
       </main>
+    </div>
+  );
+}
+
+/* ================= STATUS PANEL ================= */
+function StatusPanel() {
+  const [activeTab, setActiveTab] = useState("working");
+
+  const tabs = [
+    { id: "working", label: "What's Working" },
+    { id: "todo", label: "What's Next" },
+    { id: "bugs", label: "Known Issues" },
+  ];
+
+  const working = [
+    { group: "Login & Security", items: [
+      "You can log in with your username and password",
+      "Pages are protected — no one can access without logging in",
+      "You can log out from the sidebar",
+    ]},
+    { group: "Managing Samples", items: [
+      "You can add new samples through the step-by-step form",
+      "You can search and filter samples by kingdom, project, type, and date",
+      "You can edit any existing sample",
+      "You can delete samples you no longer need",
+      "Sample details page shows all information in one place",
+    ]},
+    { group: "Adding Sample Details", items: [
+      "You can pick a collection location on the map or search by name",
+      "You can upload SEM and microscope photos",
+      "Biochemical and enzymatic tests support multiple runs with notes",
+      "You can add custom tests on top of the default ones",
+      "Molecular data supports multiple marker genes",
+      "Publication links can be added",
+    ]},
+    { group: "Dashboard", items: [
+      "Shows total number of samples, projects, kingdoms, and species",
+      "Charts show breakdown by kingdom, project type, and collection date",
+      "Shows the most recently added and recently edited sample",
+    ]},
+  ];
+
+  const todo = [
+    { group: "Coming Soon", items: [
+      "Sample details page is missing some fields like dive site, depth, and temperature — these will be added soon",
+      "Sequence files in molecular section show as broken images — this will be fixed to show a proper file list",
+      "The live website hasn't received the latest updates yet — needs a push to go live",
+    ]},
+    { group: "Future Features", items: [
+      "Export your sample list to Excel or PDF",
+      "See all collection locations on a single map",
+      "Different user levels — e.g. admin can edit, viewer can only read",
+      "Sample photos stored properly on the server instead of inside the database",
+    ]},
+  ];
+
+  const bugs = [
+    { group: "Things to be aware of", items: [
+      "The live website is still running an older version — local version is more up to date",
+      "If you used the app before it was connected to the database, old test samples might still appear in search — you can clear them from browser settings",
+      "Login session lasts 7 days — after that you'll need to log in again",
+      "Collection dates might show one day earlier than expected due to timezone differences",
+      "The file upload button in some steps might not work consistently — being fixed",
+    ]},
+  ];
+
+  const content = { working, todo, bugs };
+
+  const tabStyles = {
+    working: { active: "bg-green-100 text-green-700 border-transparent", dot: "bg-green-500" },
+    todo: { active: "bg-yellow-100 text-yellow-700 border-transparent", dot: "bg-yellow-500" },
+    bugs: { active: "bg-red-100 text-red-700 border-transparent", dot: "bg-red-500" },
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow p-6">
+      <div className="flex gap-2 mb-6 flex-wrap">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition border ${
+              activeTab === tab.id
+                ? tabStyles[tab.id].active
+                : "border-gray-200 text-gray-500 hover:bg-gray-50"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-6">
+        {content[activeTab].map((group) => (
+          <div key={group.group}>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+              {group.group}
+            </p>
+            <ul className="space-y-2">
+              {group.items.map((item) => (
+                <li key={item} className="flex items-start gap-2 text-sm text-gray-600">
+                  <span className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${tabStyles[activeTab].dot}`} />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

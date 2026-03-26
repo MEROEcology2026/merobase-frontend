@@ -1,32 +1,119 @@
-import React from "react";
 import { InfoGrid, Info } from "./SharedComponents";
 
 export default function MiscTestsTab({ misc }) {
   if (!misc) return null;
 
+  const antibacterial = misc?.antibacterialAssay || {};
+  const biochemicalRuns = misc?.biochemicalRuns || [];
+  const enzymaticRuns = misc?.enzymaticRuns || [];
+
   return (
-    <div className="bg-white rounded-xl shadow p-6 mb-6">
-      <h2 className="text-lg font-semibold mb-4">Miscellaneous Microbiology Tests</h2>
+    <div className="space-y-6">
 
-      <InfoGrid>
-        <Info label="Pathogen" value={misc?.antibacterialAssay?.pathogen} />
-        <Info label="Method" value={misc?.antibacterialAssay?.method} />
-        <Info label="Antimalarial Assay" value={misc?.antibacterialAssay?.antimalarialAssay} />
-        <Info label="Molecular ID" value={misc?.antibacterialAssay?.molecularId} />
+      {/* ================= ANTIBACTERIAL ASSAY ================= */}
+      <div>
+        <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3">Antibacterial Assay</h3>
+        <InfoGrid>
+          <Info label="Pathogen" value={antibacterial.pathogen} />
+          <Info label="Method" value={antibacterial.method} />
+          <Info label="Activity Level" value={antibacterial.activityLevel} />
+          <Info label="Activity Notes" value={antibacterial.activityNotes} />
+          <Info label="Antimalarial Assay" value={misc?.antimalarialAssay} />
+        </InfoGrid>
+      </div>
 
-        <Info label="Catalase" value={misc?.biochemicalTests?.catalase ? "Yes" : "No"} />
-        <Info label="Oxidase" value={misc?.biochemicalTests?.oxidase ? "Yes" : "No"} />
-        <Info label="Urease" value={misc?.biochemicalTests?.urease ? "Yes" : "No"} />
-        <Info label="Gelatin Hydrolysis" value={misc?.biochemicalTests?.gelatinHydrolysis ? "Yes" : "No"} />
-        <Info label="Sulfide Production" value={misc?.biochemicalTests?.sulfideProduction ? "Yes" : "No"} />
-        <Info label="Nitrate Reduction" value={misc?.biochemicalTests?.nitrateReduction ? "Yes" : "No"} />
-        <Info label="Fermentation" value={misc?.biochemicalTests?.fermentation ? "Yes" : "No"} />
-        <Info label="Indole" value={misc?.biochemicalTests?.indole ? "Yes" : "No"} />
-        <Info label="Citrate" value={misc?.biochemicalTests?.citrate ? "Yes" : "No"} />
+      {/* ================= BIOCHEMICAL RUNS ================= */}
+      <div>
+        <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3">Biochemical Tests</h3>
+        {biochemicalRuns.length === 0 ? (
+          <p className="text-sm text-gray-400 italic">No biochemical tests recorded.</p>
+        ) : (
+          <div className="space-y-3">
+            {biochemicalRuns.map((run, index) => (
+              <RunDisplay key={run.id} run={run} index={index} color="green" />
+            ))}
+          </div>
+        )}
+      </div>
 
-        <Info label="Enzymatic Tests" value={misc?.enzymaticTests ? Object.keys(misc.enzymaticTests).filter(k => misc.enzymaticTests[k]).join(", ") || "-" : "-"} />
-        <Info label="Notes" value={misc?.testNotes} />
-      </InfoGrid>
+      {/* ================= ENZYMATIC RUNS ================= */}
+      <div>
+        <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3">Enzymatic Tests</h3>
+        {enzymaticRuns.length === 0 ? (
+          <p className="text-sm text-gray-400 italic">No enzymatic tests recorded.</p>
+        ) : (
+          <div className="space-y-3">
+            {enzymaticRuns.map((run, index) => (
+              <RunDisplay key={run.id} run={run} index={index} color="purple" />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ================= MOLECULAR IDENTIFICATION ================= */}
+      {misc?.molecularIdentification?.hasIdentification && (
+        <div>
+          <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3">Molecular Identification</h3>
+          <InfoGrid>
+            <Info label="Species Name" value={misc.molecularIdentification?.speciesName} />
+            <Info label="PCR Platform" value={misc.molecularIdentification?.pcrPlatform} />
+            <Info label="PCR Protocol" value={misc.molecularIdentification?.pcrProtocolType} />
+            <Info label="Sequencing Method" value={misc.molecularIdentification?.sequencingMethod} />
+            <Info label="Bioinformatics Pipeline" value={misc.molecularIdentification?.bioinformaticsPipeline} />
+            <Info label="Accession Status" value={misc.molecularIdentification?.accessionStatus} />
+            <Info label="Accession Number" value={misc.molecularIdentification?.accessionNumber} />
+          </InfoGrid>
+        </div>
+      )}
+
+      {/* ================= TEST NOTES ================= */}
+      {misc?.testNotes && (
+        <div>
+          <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">General Notes</h3>
+          <p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3">{misc.testNotes}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ================= RUN DISPLAY ================= */
+function RunDisplay({ run, index, color }) {
+  const allTests = [
+    ...(run.checked || []),
+    ...(run.customTests?.filter(t => run.checked?.includes(t.name) && t.name) || []).map(t => t.name)
+  ];
+
+  const uniqueTests = [...new Set(allTests)];
+
+  const colorMap = {
+    green: "bg-green-50 text-green-700",
+    purple: "bg-purple-50 text-purple-700",
+  };
+  const dotMap = {
+    green: "bg-green-500",
+    purple: "bg-purple-500",
+  };
+
+  return (
+    <div className="border rounded-lg p-4 bg-gray-50">
+      <p className="text-sm font-semibold text-gray-700 mb-2">Run #{index + 1}</p>
+      {uniqueTests.length === 0 ? (
+        <p className="text-sm text-gray-400 italic">No tests checked.</p>
+      ) : (
+        <div className="flex flex-wrap gap-2 mb-2">
+          {uniqueTests.map((test) => (
+            <span key={test}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${colorMap[color]}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${dotMap[color]}`} />
+              {test}
+            </span>
+          ))}
+        </div>
+      )}
+      {run.notes && (
+        <p className="text-xs text-gray-500 mt-2 italic">Notes: {run.notes}</p>
+      )}
     </div>
   );
 }

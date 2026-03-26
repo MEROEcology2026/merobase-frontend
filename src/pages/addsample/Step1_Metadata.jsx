@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import { useState, useEffect, useRef } from "react";
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import FormProgressBar from "../../components/FormProgressBar";
 import FileDropzone from "../../components/FileDropzone";
@@ -25,7 +25,18 @@ const STORAGE_LOCATIONS = [
   "Ethanol Preserved", "Formalin Preserved",
 ];
 
-/* ================= LOCATION MARKER (outside component) ================= */
+/* ================= FLY TO LOCATION ================= */
+function FlyToLocation({ coords }) {
+  const map = useMap();
+  useEffect(() => {
+    if (coords) {
+      map.flyTo(coords, 15, { duration: 1.5 });
+    }
+  }, [coords, map]);
+  return null;
+}
+
+/* ================= LOCATION MARKER ================= */
 function LocationMarker({ lat, lng, onLocationSelect }) {
   const [pos, setPos] = useState(
     lat && lng ? [parseFloat(lat), parseFloat(lng)] : null
@@ -54,8 +65,55 @@ export default function Step1_Metadata() {
     photo: true, general: true, bio: true, map: true,
   });
 
+  /* ================= MAP SEARCH STATE ================= */
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [flyTo, setFlyTo] = useState(null);
+  const searchRef = useRef(null);
+
   const toggle = (key) => setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
   const setValue = (field, value) => updateSection("metadata", { [field]: value });
+
+  /* ================= SEARCH HANDLER ================= */
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+    setSearching(true);
+    setSearchResults([]);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&format=json&limit=5`,
+        { headers: { "Accept-Language": "en" } }
+      );
+      const data = await res.json();
+      setSearchResults(data);
+    } catch (err) {
+      console.error("Search failed:", err);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleSelectResult = (result) => {
+    const lat = parseFloat(result.lat);
+    const lng = parseFloat(result.lon);
+    setValue("latitude", lat);
+    setValue("longitude", lng);
+    setFlyTo([lat, lng]);
+    setSearchResults([]);
+    setSearchQuery(result.display_name.split(",")[0]);
+  };
+
+  /* ================= CLOSE RESULTS ON OUTSIDE CLICK ================= */
+  useEffect(() => {
+    const handler = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setSearchResults([]);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -102,7 +160,6 @@ export default function Step1_Metadata() {
             onChange={(v) => setValue("projectType", v)} options={["A", "B"]} />
           <Input label="Project Number" value={metadata.projectNumber || ""}
             onChange={(v) => setValue("projectNumber", v)} />
-          {/* ✅ FIXED: dateAcquired → collectionDate */}
           <Input label="Collection Date" type="date"
             value={metadata.collectionDate || ""}
             onChange={(v) => setValue("collectionDate", v)} />
@@ -138,6 +195,51 @@ export default function Step1_Metadata() {
 
       {/* ================= MAP ================= */}
       <Box title="Map Location Picker" open={open.map} toggle={() => toggle("map")}>
+
+        {/* ================= SEARCH BAR ================= */}
+        <div ref={searchRef} className="relative mb-4">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              placeholder="Search location (e.g. Tulamben, Bali)..."
+              className="flex-1 rounded-lg border px-3 py-2 text-base focus:ring-2 focus:ring-blue-400 focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={handleSearch}
+              disabled={searching}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:bg-blue-300 transition"
+            >
+              {searching ? "Searching..." : "Search"}
+            </button>
+          </div>
+
+          {/* Search Results Dropdown */}
+          {searchResults.length > 0 && (
+            <div className="absolute z-50 w-full bg-white border rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
+              {searchResults.map((result) => (
+                <button
+                  key={result.place_id}
+                  type="button"
+                  onClick={() => handleSelectResult(result)}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-blue-50 border-b last:border-0 transition"
+                >
+                  <p className="font-medium text-gray-800 truncate">
+                    {result.display_name.split(",")[0]}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">
+                    {result.display_name}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ================= MAP ================= */}
         <div className="h-64 rounded-xl overflow-hidden mb-4">
           <MapContainer center={[-8.34, 115.54]} zoom={12} className="h-full w-full">
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
@@ -147,10 +249,13 @@ export default function Step1_Metadata() {
               onLocationSelect={(lat, lng) => {
                 setValue("latitude", lat);
                 setValue("longitude", lng);
+                setFlyTo([lat, lng]);
               }}
             />
+            <FlyToLocation coords={flyTo} />
           </MapContainer>
         </div>
+
         <Grid>
           <Input label="Latitude" value={metadata.latitude || ""}
             onChange={(v) => setValue("latitude", v)} />

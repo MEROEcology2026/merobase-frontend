@@ -9,11 +9,13 @@ import {
   LayoutDashboard, PlusCircle, Edit3, Search, ChevronLeft, LogOut,
 } from "lucide-react";
 import { samplesAPI } from "../services/api";
+import { useSampleFormContext } from "../context/SampleFormContext";
 
 const COLORS = ["#2563EB","#10B981","#F59E0B","#8B5CF6","#EC4899","#6366F1","#9CA3AF"];
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { clearDraftOnly } = useSampleFormContext();
   const [samples, setSamples] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -99,13 +101,17 @@ export default function Dashboard() {
 
         <nav className="mt-4 space-y-1 flex-1">
           <NavItem icon={<LayoutDashboard />} label="Dashboard" open={sidebarOpen} active />
-          <NavItem icon={<PlusCircle />} label="Add Sample" open={sidebarOpen} onClick={() => navigate("/add/step1")} />
-          <NavItem icon={<Edit3 />} label="Edit Sample" open={sidebarOpen} onClick={() => navigate("/editsample")} />
-          <NavItem icon={<Search />} label="Search Sample" open={sidebarOpen} onClick={() => navigate("/searchsample")} />
+          <NavItem icon={<PlusCircle />} label="Add Sample" open={sidebarOpen}
+            onClick={() => { clearDraftOnly(); navigate("/add/step1"); }} />
+          <NavItem icon={<Edit3 />} label="Edit Sample" open={sidebarOpen}
+            onClick={() => navigate("/editsample")} />
+          <NavItem icon={<Search />} label="Search Sample" open={sidebarOpen}
+            onClick={() => navigate("/searchsample")} />
         </nav>
 
         <div className="p-2 border-t">
-          <NavItem icon={<LogOut className="text-red-500" />} label="Logout" open={sidebarOpen} onClick={handleLogout} />
+          <NavItem icon={<LogOut className="text-red-500" />} label="Logout"
+            open={sidebarOpen} onClick={handleLogout} />
         </div>
       </aside>
 
@@ -217,17 +223,28 @@ function StatusPanel() {
       "You can log out from the sidebar",
     ]},
     { group: "Managing Samples", items: [
-      "You can add new samples through the step-by-step form",
-      "You can search and filter samples by kingdom, project, type, and date",
-      "You can edit any existing sample",
+      "You can add new samples through the step-by-step form — form always starts blank",
+      "Sample ID is auto-generated from Sample Type, Project Type, Project Number and Sample Number",
+      "You can search and filter samples by kingdom, project, type, date and sample ID",
+      "You can edit any existing sample from Edit Sample, Search, and Sample Details pages",
       "You can delete samples you no longer need",
       "Sample details page shows all information in one place",
+    ]},
+    { group: "Primary Isolated", items: [
+      "Supports multiple isolated entries per sample",
+      "Each entry has an Isolated Type — Fungi (FNG) or Bacteria (BCT)",
+      "Isolated ID is auto-generated per entry — e.g. B.A.01.005.FNG.ISO-01",
+      "Each entry has its own storage fields and notes",
+    ]},
+    { group: "Microbiology Tests", items: [
+      "Antibacterial assay supports multiple runs with all fields per run",
+      "Biochemical and enzymatic tests support multiple runs with custom tests and notes",
+      "Each test run can be linked to a Primary Isolated entry",
+      "Test ID is auto-generated when linked — e.g. B.A.01.005.FNG.ISO-01.TEST-01",
     ]},
     { group: "Adding Sample Details", items: [
       "You can pick a collection location on the map or search by name",
       "You can upload SEM and microscope photos",
-      "Biochemical and enzymatic tests support multiple runs with notes",
-      "You can add custom tests on top of the default ones",
       "Molecular data supports multiple marker genes",
       "Publication links can be added",
     ]},
@@ -240,25 +257,27 @@ function StatusPanel() {
 
   const todo = [
     { group: "Coming Soon", items: [
-      "Sample details page is missing some fields like dive site, depth, and temperature — these will be added soon",
-      "Sequence files in molecular section show as broken images — this will be fixed to show a proper file list",
-      "The live website hasn't received the latest updates yet — needs a push to go live",
+      "Sample details page is missing some fields like dive site, depth, and temperature",
+      "Sequence files in molecular section show as broken images — needs a proper file list",
+      "Isolated morphology (Step 3B) not yet linked to a Primary Isolated ID",
+      "MetadataTab in sample details missing dive site, depth, substrate and temperature fields",
     ]},
     { group: "Future Features", items: [
       "Export your sample list to Excel or PDF",
       "See all collection locations on a single map",
-      "Different user levels — e.g. admin can edit, viewer can only read",
+      "Different user levels — admin can edit, viewer can only read",
       "Sample photos stored properly on the server instead of inside the database",
+      "Step 3B — Isolated Morphology linked to a specific Primary Isolated entry",
     ]},
   ];
 
   const bugs = [
     { group: "Things to be aware of", items: [
-      "The live website is still running an older version — local version is more up to date",
-      "If you used the app before it was connected to the database, old test samples might still appear in search — you can clear them from browser settings",
-      "Login session lasts 7 days — after that you'll need to log in again",
+      "Login session lasts 7 days — after that you will need to log in again",
       "Collection dates might show one day earlier than expected due to timezone differences",
-      "The file upload button in some steps might not work consistently — being fixed",
+      "The file upload button in some steps might not work consistently",
+      "Step 3B still has its own internal copy of the image resize function — doesn't affect usage",
+      "Always use the Add Sample button in the sidebar to start a new sample — avoids form state conflicts",
     ]},
   ];
 
@@ -274,15 +293,12 @@ function StatusPanel() {
     <div className="bg-white rounded-xl shadow p-6">
       <div className="flex gap-2 mb-6 flex-wrap">
         {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
             className={`px-4 py-1.5 rounded-full text-sm font-medium transition border ${
               activeTab === tab.id
                 ? tabStyles[tab.id].active
                 : "border-gray-200 text-gray-500 hover:bg-gray-50"
-            }`}
-          >
+            }`}>
             {tab.label}
           </button>
         ))}
@@ -312,11 +328,9 @@ function StatusPanel() {
 /* ================= SUB COMPONENTS ================= */
 function NavItem({ icon, label, open, onClick, active }) {
   return (
-    <button
-      onClick={onClick}
+    <button onClick={onClick}
       className={`flex items-center gap-3 px-4 py-3 w-full rounded-lg transition
-        ${active ? "bg-blue-50 font-semibold" : "hover:bg-gray-100"}`}
-    >
+        ${active ? "bg-blue-50 font-semibold" : "hover:bg-gray-100"}`}>
       {icon}
       {open && <span>{label}</span>}
     </button>
@@ -338,6 +352,7 @@ function InfoCard({ title, sample }) {
       <h3 className="text-lg font-semibold mb-2">{title}</h3>
       {sample ? (
         <>
+          <p className="text-xs font-mono text-blue-600 mb-1">{sample.sample_id}</p>
           <p className="font-medium">{sample.sample_name || "Unnamed Sample"}</p>
           <p className="text-sm text-gray-500">Species: {sample.species || "—"}</p>
           <p className="text-sm text-gray-500">

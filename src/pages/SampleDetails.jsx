@@ -18,7 +18,7 @@ import PublicationTab from "./SampleDetails/PublicationTab";
 export default function SampleDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { loadSampleForEdit } = useSampleFormContext();
+  const { loadSampleForEdit, clearDraftOnly } = useSampleFormContext();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sample, setSample] = useState(null);
@@ -89,7 +89,8 @@ export default function SampleDetails() {
       molecular: sample.molecular || {},
       publication: sample.publication || { links: [] },
     });
-    navigate("/add/step1");
+    /* ✅ FIXED: pass fromEdit state so wizard doesn't reset */
+    navigate("/add/step1", { state: { fromEdit: true } });
   };
 
   /* ================= LOADING / NOT FOUND ================= */
@@ -151,14 +152,19 @@ export default function SampleDetails() {
         </div>
 
         <nav className="flex flex-col gap-1 px-2 mt-4 flex-1">
-          <SidebarBtn icon={<LayoutDashboard />} label="Dashboard" open={sidebarOpen} onClick={() => navigate("/dashboard")} />
-          <SidebarBtn icon={<PlusCircle />} label="Add Sample" open={sidebarOpen} onClick={() => navigate("/add/step1")} />
-          <SidebarBtn icon={<Edit3 />} label="Edit Sample" open={sidebarOpen} onClick={() => navigate("/editsample")} />
-          <SidebarBtn icon={<Search />} label="Search" open={sidebarOpen} onClick={() => navigate("/searchsample")} />
+          <SidebarBtn icon={<LayoutDashboard />} label="Dashboard" open={sidebarOpen}
+            onClick={() => navigate("/dashboard")} />
+          <SidebarBtn icon={<PlusCircle />} label="Add Sample" open={sidebarOpen}
+            onClick={() => { clearDraftOnly(); navigate("/add/step1"); }} />
+          <SidebarBtn icon={<Edit3 />} label="Edit Sample" open={sidebarOpen}
+            onClick={() => navigate("/editsample")} />
+          <SidebarBtn icon={<Search />} label="Search" open={sidebarOpen}
+            onClick={() => navigate("/searchsample")} />
         </nav>
 
         <div className="p-2 border-t">
-          <SidebarBtn icon={<LogOut className="text-red-500" />} label="Logout" open={sidebarOpen} onClick={handleLogout} />
+          <SidebarBtn icon={<LogOut className="text-red-500" />} label="Logout"
+            open={sidebarOpen} onClick={handleLogout} />
         </div>
       </aside>
 
@@ -166,19 +172,17 @@ export default function SampleDetails() {
       <main className="flex-1 max-w-6xl mx-auto p-8 space-y-6">
         <header className="mb-4 flex items-center justify-between">
           <div>
-            <button
-              onClick={() => navigate(-1)}
-              className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-2"
-            >
+            <button onClick={() => navigate(-1)}
+              className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-2">
               <ArrowLeft size={14} /> Back
             </button>
             <h1 className="text-2xl font-bold">Sample Details</h1>
-            <p className="text-sm text-gray-500">{sample.sample_id}</p>
+            <p className="text-sm font-mono text-blue-600 font-semibold mt-1">
+              {sample.sample_id}
+            </p>
           </div>
-          <button
-            onClick={handleEdit}
-            className="px-4 py-2 bg-yellow-500 text-white rounded-lg text-sm hover:bg-yellow-600"
-          >
+          <button onClick={handleEdit}
+            className="px-4 py-2 bg-yellow-500 text-white rounded-lg text-sm hover:bg-yellow-600">
             Edit Sample
           </button>
         </header>
@@ -192,8 +196,9 @@ export default function SampleDetails() {
           <MorphologyTab morphology={sample.morphology} />
         </Section>
 
+        {/* ✅ FIXED: passes primaryIsolatedRuns array */}
         <Section title="Primary Isolated" open={open.primary} onToggle={() => toggle("primary")}>
-          <PrimaryIsolatedTab primary={sample.microbiology?.primaryIsolated} />
+          <PrimaryIsolatedTab primary={sample.microbiology?.primaryIsolatedRuns} />
         </Section>
 
         <Section title="Isolated Morphology" open={open.isolated} onToggle={() => toggle("isolated")}>
@@ -220,7 +225,8 @@ export default function SampleDetails() {
 function Section({ title, open, onToggle, children }) {
   return (
     <div className="bg-white rounded-xl shadow p-6">
-      <button onClick={onToggle} className="flex items-center gap-2 mb-4 focus:outline-none w-full">
+      <button onClick={onToggle}
+        className="flex items-center gap-2 mb-4 focus:outline-none w-full">
         <ChevronDown className={`transition-transform ${open ? "rotate-180" : ""}`} />
         <h2 className="text-lg font-semibold">{title}</h2>
       </button>
@@ -232,10 +238,8 @@ function Section({ title, open, onToggle, children }) {
 /* ================= SIDEBAR BUTTON ================= */
 function SidebarBtn({ icon, label, open, onClick }) {
   return (
-    <button
-      onClick={onClick}
-      className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 w-full transition"
-    >
+    <button onClick={onClick}
+      className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 w-full transition">
       {icon}
       {open && <span className="text-gray-700">{label}</span>}
     </button>

@@ -21,7 +21,38 @@ export default function MiscTestsTab({ misc }) {
           <div className="space-y-3">
             {antibacterialRuns.map((run, index) => (
               <div key={run.id || index} className="border rounded-lg p-4 bg-gray-50">
-                <p className="text-sm font-semibold text-gray-700 mb-3">Run #{index + 1}</p>
+
+                {/* Run header */}
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-semibold text-gray-700">Run #{index + 1}</p>
+                </div>
+
+                {/* Test ID */}
+                {run.testId && (
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 mb-3">
+                    <div className="flex items-center gap-4">
+                      {run.linkedIsolatedId && (
+                        <div>
+                          <p className="text-xs font-semibold text-purple-400 uppercase tracking-wider">
+                            Linked ISO
+                          </p>
+                          <p className="font-mono text-xs text-purple-600">
+                            {run.linkedIsolatedId}
+                          </p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-xs font-semibold text-purple-500 uppercase tracking-wider">
+                          Test ID
+                        </p>
+                        <p className="font-mono font-bold text-purple-700 text-sm">
+                          {run.testId}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <InfoGrid>
                   <Info label="Pathogen" value={run.pathogen} />
                   <Info label="Method" value={run.method} />
@@ -122,7 +153,39 @@ function RunDisplay({ run, index, color }) {
 
   return (
     <div className="border rounded-lg p-4 bg-gray-50">
-      <p className="text-sm font-semibold text-gray-700 mb-2">Run #{index + 1}</p>
+
+      {/* Run header */}
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-sm font-semibold text-gray-700">Run #{index + 1}</p>
+      </div>
+
+      {/* Test ID */}
+      {run.testId && (
+        <div className="bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 mb-3">
+          <div className="flex items-center gap-4">
+            {run.linkedIsolatedId && (
+              <div>
+                <p className="text-xs font-semibold text-purple-400 uppercase tracking-wider">
+                  Linked ISO
+                </p>
+                <p className="font-mono text-xs text-purple-600">
+                  {run.linkedIsolatedId}
+                </p>
+              </div>
+            )}
+            <div>
+              <p className="text-xs font-semibold text-purple-500 uppercase tracking-wider">
+                Test ID
+              </p>
+              <p className="font-mono font-bold text-purple-700 text-sm">
+                {run.testId}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tests */}
       {allTests.length === 0 ? (
         <p className="text-sm text-gray-400 italic">No tests checked.</p>
       ) : (
@@ -136,6 +199,7 @@ function RunDisplay({ run, index, color }) {
           ))}
         </div>
       )}
+
       {run.notes && (
         <p className="text-xs text-gray-500 mt-2 italic">Notes: {run.notes}</p>
       )}

@@ -1,17 +1,8 @@
 import { useState } from "react";
 import { useSampleForm } from "../../context/SampleFormContext";
 import FileDropzone from "../../components/FileDropzone";
-import { ChevronDown, ChevronUp, Plus, X, Trash2 } from "lucide-react";
-
-const normalizeToArray = (value) => {
-  if (Array.isArray(value)) return value;
-  if (value && typeof value === "object") {
-    return Object.entries(value)
-      .filter(([, v]) => v === true)
-      .map(([k]) => k.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase()));
-  }
-  return [];
-};
+import { ChevronDown, ChevronUp, Plus, X, Trash2, Link } from "lucide-react";
+import { generateTestId, getNextTestIndex } from "../../utils/sampleIdGenerator";
 
 const DEFAULT_BIOCHEMICAL = [
   "Catalase", "Oxidase", "Urease", "Gelatin hydrolysis",
@@ -39,8 +30,10 @@ const ACTIVITY_LEVELS = ["Low", "Medium", "High"];
 const ANTIMALARIAL_OPTIONS = ["Plasmodium berghei", "Plasmodium falciparum"];
 
 /* ================= EMPTY RUN FACTORIES ================= */
-const createAntibacterialRun = () => ({
+const createAntibacterialRun = (isolatedId, testId) => ({
   id: crypto.randomUUID(),
+  linkedIsolatedId: isolatedId || "",
+  testId: testId || "",
   pathogen: "",
   method: "",
   activityLevel: "",
@@ -49,8 +42,10 @@ const createAntibacterialRun = () => ({
   notes: "",
 });
 
-const createTestRun = () => ({
+const createTestRun = (isolatedId, testId) => ({
   id: crypto.randomUUID(),
+  linkedIsolatedId: isolatedId || "",
+  testId: testId || "",
   notes: "",
   checked: [],
   customTests: []
@@ -60,18 +55,24 @@ export default function Step3C_Misc() {
   const { formData, updateSection } = useSampleForm();
   const microTests = formData.microbiology?.microbiologyTests || {};
 
+  /* ================= GET PRIMARY ISOLATED RUNS FOR SELECTOR ================= */
+  const isolatedRuns = formData.microbiology?.primaryIsolatedRuns || [];
+  const isolatedOptions = isolatedRuns
+    .filter((r) => r.isolatedId)
+    .map((r) => ({
+      value: r.isolatedId,
+      label: `${r.isolatedId} (${r.isolatedType || "Unknown"})`,
+    }));
+
   /* ================= RUNS ================= */
   const antibacterialRuns = microTests.antibacterialRuns?.length > 0
-    ? microTests.antibacterialRuns
-    : [createAntibacterialRun()];
+    ? microTests.antibacterialRuns : [createAntibacterialRun()];
 
   const biochemicalRuns = microTests.biochemicalRuns?.length > 0
-    ? microTests.biochemicalRuns
-    : [createTestRun()];
+    ? microTests.biochemicalRuns : [createTestRun()];
 
   const enzymaticRuns = microTests.enzymaticRuns?.length > 0
-    ? microTests.enzymaticRuns
-    : [createTestRun()];
+    ? microTests.enzymaticRuns : [createTestRun()];
 
   const molecular = microTests.molecularIdentification || {};
 
@@ -84,17 +85,24 @@ export default function Step3C_Misc() {
   const updateMicroTests = (payload) => {
     updateSection("microbiology", {
       ...formData.microbiology,
-      microbiologyTests: {
-        ...microTests,
-        ...payload
-      }
+      microbiologyTests: { ...microTests, ...payload }
     });
+  };
+
+  /* ================= GET NEXT TEST ID FOR AN ISO ================= */
+  const getTestIdForIso = (isolatedId, allRuns) => {
+    const nextIndex = getNextTestIndex(allRuns, isolatedId);
+    return generateTestId(isolatedId, nextIndex);
   };
 
   /* ================= ANTIBACTERIAL RUN HANDLERS ================= */
   const addAntibacterialRun = () => {
+    const firstIsoId = isolatedOptions[0]?.value || "";
+    const testId = firstIsoId
+      ? getTestIdForIso(firstIsoId, [...antibacterialRuns, { linkedIsolatedId: firstIsoId }])
+      : "";
     updateMicroTests({
-      antibacterialRuns: [...antibacterialRuns, createAntibacterialRun()]
+      antibacterialRuns: [...antibacterialRuns, createAntibacterialRun(firstIsoId, testId)]
     });
   };
 
@@ -107,16 +115,28 @@ export default function Step3C_Misc() {
 
   const updateAntibacterialRun = (id, field, value) => {
     updateMicroTests({
-      antibacterialRuns: antibacterialRuns.map((r) =>
-        r.id === id ? { ...r, [field]: value } : r
-      )
+      antibacterialRuns: antibacterialRuns.map((r) => {
+        if (r.id !== id) return r;
+        const updated = { ...r, [field]: value };
+        /* Regenerate TEST ID when ISO link changes */
+        if (field === "linkedIsolatedId" && value) {
+          const others = antibacterialRuns.filter(x => x.id !== id);
+          const nextIndex = getNextTestIndex(others, value);
+          updated.testId = generateTestId(value, nextIndex);
+        }
+        return updated;
+      })
     });
   };
 
   /* ================= TEST RUN HANDLERS ================= */
-  const addRun = (key) => {
+  const addRun = (key, currentRuns) => {
+    const firstIsoId = isolatedOptions[0]?.value || "";
+    const testId = firstIsoId
+      ? getTestIdForIso(firstIsoId, [...currentRuns, { linkedIsolatedId: firstIsoId }])
+      : "";
     const current = microTests[key] || [createTestRun()];
-    updateMicroTests({ [key]: [...current, createTestRun()] });
+    updateMicroTests({ [key]: [...current, createTestRun(firstIsoId, testId)] });
   };
 
   const removeRun = (key, id) => {
@@ -128,7 +148,17 @@ export default function Step3C_Misc() {
   const updateRun = (key, id, field, value) => {
     const current = microTests[key] || [];
     updateMicroTests({
-      [key]: current.map((r) => r.id === id ? { ...r, [field]: value } : r)
+      [key]: current.map((r) => {
+        if (r.id !== id) return r;
+        const updated = { ...r, [field]: value };
+        /* Regenerate TEST ID when ISO link changes */
+        if (field === "linkedIsolatedId" && value) {
+          const others = current.filter(x => x.id !== id);
+          const nextIndex = getNextTestIndex(others, value);
+          updated.testId = generateTestId(value, nextIndex);
+        }
+        return updated;
+      })
     });
   };
 
@@ -201,21 +231,69 @@ export default function Step3C_Misc() {
     });
   };
 
+  /* ================= ISO SELECTOR COMPONENT ================= */
+  const IsoSelector = ({ linkedIsolatedId, testId, onChange }) => (
+    <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 md:col-span-2">
+      <div className="flex items-center gap-2 mb-2">
+        <Link size={14} className="text-purple-600" />
+        <p className="text-xs font-semibold text-purple-600 uppercase tracking-wider">
+          Link to Primary Isolated Entry
+        </p>
+      </div>
+      {isolatedOptions.length === 0 ? (
+        <p className="text-xs text-yellow-600 bg-yellow-50 rounded px-3 py-2">
+          No primary isolated entries found — go to Step 3A and add entries first.
+        </p>
+      ) : (
+        <select
+          value={linkedIsolatedId || ""}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full border border-purple-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-purple-400 focus:outline-none"
+        >
+          <option value="">— Select Primary Isolated ID —</option>
+          {isolatedOptions.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      )}
+      {testId && (
+        <div className="mt-2 flex items-center gap-2">
+          <p className="text-xs font-semibold text-purple-500 uppercase tracking-wider">
+            Auto-generated Test ID:
+          </p>
+          <p className="text-sm font-bold font-mono text-purple-700">{testId}</p>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Microbiology - Miscellaneous</h1>
+
+      {/* ================= ISO WARNING ================= */}
+      {isolatedOptions.length === 0 && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3">
+          <p className="text-yellow-700 text-sm">
+            No primary isolated entries found. Go to Step 3A first to add isolated entries — each test run here should be linked to an isolated entry.
+          </p>
+        </div>
+      )}
 
       {/* ================= ANTIBACTERIAL ASSAY ================= */}
       <CollapsibleBox title="Antibacterial Assay" open={openAssay} setOpen={setOpenAssay}>
         <div className="space-y-4">
           {antibacterialRuns.map((run, index) => (
             <div key={run.id} className="border rounded-xl p-4 bg-gray-50 space-y-4">
-              {/* Run header */}
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-gray-700">Run #{index + 1}</h3>
+                <div>
+                  <h3 className="font-semibold text-gray-700">Run #{index + 1}</h3>
+                  {run.testId && (
+                    <p className="text-xs font-mono text-purple-600 mt-0.5">{run.testId}</p>
+                  )}
+                </div>
                 {antibacterialRuns.length > 1 && (
-                  <button type="button"
-                    onClick={() => removeAntibacterialRun(run.id)}
+                  <button type="button" onClick={() => removeAntibacterialRun(run.id)}
                     className="flex items-center gap-1 text-red-500 text-sm hover:text-red-700 transition">
                     <Trash2 size={14} /> Remove
                   </button>
@@ -223,55 +301,43 @@ export default function Step3C_Misc() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Select
-                  label="Pathogen"
-                  value={run.pathogen || ""}
+                {/* ISO SELECTOR */}
+                <IsoSelector
+                  linkedIsolatedId={run.linkedIsolatedId}
+                  testId={run.testId}
+                  onChange={(v) => updateAntibacterialRun(run.id, "linkedIsolatedId", v)}
+                />
+
+                <Select label="Pathogen" value={run.pathogen || ""}
                   onChange={(e) => updateAntibacterialRun(run.id, "pathogen", e.target.value)}
-                  options={["", ...PATHOGENS]}
-                />
-                <Select
-                  label="Method"
-                  value={run.method || ""}
+                  options={["", ...PATHOGENS]} />
+                <Select label="Method" value={run.method || ""}
                   onChange={(e) => updateAntibacterialRun(run.id, "method", e.target.value)}
-                  options={["", ...METHODS]}
-                />
-                <Select
-                  label="Antibacterial Activity"
-                  value={run.activityLevel || ""}
+                  options={["", ...METHODS]} />
+                <Select label="Antibacterial Activity" value={run.activityLevel || ""}
                   onChange={(e) => updateAntibacterialRun(run.id, "activityLevel", e.target.value)}
-                  options={["", ...ACTIVITY_LEVELS]}
-                />
-                <Select
-                  label="Antimalarial Assay"
-                  value={run.antimalarialAssay || ""}
+                  options={["", ...ACTIVITY_LEVELS]} />
+                <Select label="Antimalarial Assay" value={run.antimalarialAssay || ""}
                   onChange={(e) => updateAntibacterialRun(run.id, "antimalarialAssay", e.target.value)}
-                  options={["", ...ANTIMALARIAL_OPTIONS]}
-                />
+                  options={["", ...ANTIMALARIAL_OPTIONS]} />
               </div>
 
               {run.activityLevel && (
-                <Input
-                  label="Activity Notes"
-                  value={run.activityNotes || ""}
-                  onChange={(e) => updateAntibacterialRun(run.id, "activityNotes", e.target.value)}
-                />
+                <Input label="Activity Notes" value={run.activityNotes || ""}
+                  onChange={(e) => updateAntibacterialRun(run.id, "activityNotes", e.target.value)} />
               )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1">Run Notes</label>
-                <textarea
-                  value={run.notes || ""}
+                <textarea value={run.notes || ""}
                   onChange={(e) => updateAntibacterialRun(run.id, "notes", e.target.value)}
-                  rows={2}
-                  placeholder="Notes for this run..."
-                  className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white"
-                />
+                  rows={2} placeholder="Notes for this run..."
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white" />
               </div>
             </div>
           ))}
 
-          <button type="button"
-            onClick={addAntibacterialRun}
+          <button type="button" onClick={addAntibacterialRun}
             className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
             <Plus size={14} /> Add Another Run
           </button>
@@ -288,6 +354,8 @@ export default function Step3C_Misc() {
               index={index}
               defaultTests={DEFAULT_BIOCHEMICAL}
               canRemove={biochemicalRuns.length > 1}
+              isolatedOptions={isolatedOptions}
+              onIsoChange={(v) => updateRun("biochemicalRuns", run.id, "linkedIsolatedId", v)}
               onRemove={() => removeRun("biochemicalRuns", run.id)}
               onNotesChange={(v) => updateRun("biochemicalRuns", run.id, "notes", v)}
               onToggle={(name) => toggleCheck("biochemicalRuns", run.id, name)}
@@ -297,8 +365,7 @@ export default function Step3C_Misc() {
               onToggleCustom={(testId, name) => toggleCustomCheck("biochemicalRuns", run.id, testId, name)}
             />
           ))}
-          <button type="button"
-            onClick={() => addRun("biochemicalRuns")}
+          <button type="button" onClick={() => addRun("biochemicalRuns", biochemicalRuns)}
             className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
             <Plus size={14} /> Add Another Run
           </button>
@@ -315,6 +382,8 @@ export default function Step3C_Misc() {
               index={index}
               defaultTests={DEFAULT_ENZYMATIC}
               canRemove={enzymaticRuns.length > 1}
+              isolatedOptions={isolatedOptions}
+              onIsoChange={(v) => updateRun("enzymaticRuns", run.id, "linkedIsolatedId", v)}
               onRemove={() => removeRun("enzymaticRuns", run.id)}
               onNotesChange={(v) => updateRun("enzymaticRuns", run.id, "notes", v)}
               onToggle={(name) => toggleCheck("enzymaticRuns", run.id, name)}
@@ -324,8 +393,7 @@ export default function Step3C_Misc() {
               onToggleCustom={(testId, name) => toggleCustomCheck("enzymaticRuns", run.id, testId, name)}
             />
           ))}
-          <button type="button"
-            onClick={() => addRun("enzymaticRuns")}
+          <button type="button" onClick={() => addRun("enzymaticRuns", enzymaticRuns)}
             className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
             <Plus size={14} /> Add Another Run
           </button>
@@ -404,19 +472,53 @@ export default function Step3C_Misc() {
 
 /* ================= RUN BLOCK ================= */
 function RunBlock({
-  run, index, defaultTests, canRemove,
-  onRemove, onNotesChange, onToggle,
+  run, index, defaultTests, canRemove, isolatedOptions,
+  onIsoChange, onRemove, onNotesChange, onToggle,
   onAddCustom, onUpdateCustom, onRemoveCustom, onToggleCustom
 }) {
   return (
     <div className="border rounded-xl p-4 bg-gray-50 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-gray-700">Run #{index + 1}</h3>
+        <div>
+          <h3 className="font-semibold text-gray-700">Run #{index + 1}</h3>
+          {run.testId && (
+            <p className="text-xs font-mono text-purple-600 mt-0.5">{run.testId}</p>
+          )}
+        </div>
         {canRemove && (
           <button type="button" onClick={onRemove}
             className="flex items-center gap-1 text-red-500 text-sm hover:text-red-700 transition">
             <Trash2 size={14} /> Remove
           </button>
+        )}
+      </div>
+
+      {/* ISO SELECTOR */}
+      <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+        <div className="flex items-center gap-2 mb-2">
+          <Link size={14} className="text-purple-600" />
+          <p className="text-xs font-semibold text-purple-600 uppercase tracking-wider">
+            Link to Primary Isolated Entry
+          </p>
+        </div>
+        {isolatedOptions.length === 0 ? (
+          <p className="text-xs text-yellow-600 bg-yellow-50 rounded px-3 py-2">
+            No primary isolated entries found — go to Step 3A first.
+          </p>
+        ) : (
+          <select value={run.linkedIsolatedId || ""} onChange={(e) => onIsoChange(e.target.value)}
+            className="w-full border border-purple-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-purple-400 focus:outline-none">
+            <option value="">— Select Primary Isolated ID —</option>
+            {isolatedOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        )}
+        {run.testId && (
+          <div className="mt-2 flex items-center gap-2">
+            <p className="text-xs font-semibold text-purple-500 uppercase tracking-wider">Test ID:</p>
+            <p className="text-sm font-bold font-mono text-purple-700">{run.testId}</p>
+          </div>
         )}
       </div>
 
@@ -440,8 +542,7 @@ function RunBlock({
                 checked={run.checked?.includes(test.name) || false}
                 onChange={() => onToggleCustom(test.id, test.name)}
                 disabled={!test.name} />
-              <input type="text"
-                value={test.name}
+              <input type="text" value={test.name}
                 onChange={(e) => onUpdateCustom(test.id, e.target.value)}
                 placeholder="Enter test name..."
                 className="flex-1 border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white" />
@@ -461,11 +562,8 @@ function RunBlock({
 
       <div>
         <label className="block text-sm font-medium text-gray-600 mb-1">Run Notes</label>
-        <textarea
-          value={run.notes || ""}
-          onChange={(e) => onNotesChange(e.target.value)}
-          rows={2}
-          placeholder="Notes for this run..."
+        <textarea value={run.notes || ""} onChange={(e) => onNotesChange(e.target.value)}
+          rows={2} placeholder="Notes for this run..."
           className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white" />
       </div>
     </div>

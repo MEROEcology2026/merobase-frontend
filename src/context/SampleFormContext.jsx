@@ -1,17 +1,16 @@
 import {
   createContext,
   useContext,
-  useEffect,
   useState
 } from "react";
 import { samplesAPI } from "../services/api";
+import { generateSampleId } from "../utils/sampleIdGenerator";
 
 const SampleFormContext = createContext(null);
 
 /* ================= INITIAL STRUCTURE ================= */
 const initial = {
   metadata: {
-    sampleId: "",
     sampleName: "",
     sampleType: "Biological",
     projectType: "A",
@@ -37,18 +36,7 @@ const initial = {
     notes: "",
   },
   microbiology: {
-    primaryIsolated: {
-      isolatedId: "",
-      shelf: "",
-      positionInBox: "",
-      storageTemperature: "-20°C",
-      agarMedia: "",
-      solvent: "Aquades",
-      incubationTemperature: "",
-      incubationTime: "",
-      oxygenRequirement: "",
-      notes: ""
-    },
+    primaryIsolatedRuns: [],
     isolatedMorphology: {
       macroscopic: { shape: "", arrangement: "", images: [] },
       colonyDescription: {
@@ -58,12 +46,9 @@ const initial = {
       microscopic: { shape: "", arrangement: "", gramReaction: "", images: [] }
     },
     microbiologyTests: {
-      antibacterialAssay: {
-        pathogen: "", method: "", activityLevel: "", activityNotes: ""
-      },
-      antimalarialAssay: "",
-      biochemicalTests: [],
-      enzymaticTests: [],
+      antibacterialRuns: [],
+      biochemicalRuns: [],
+      enzymaticRuns: [],
       testNotes: "",
       molecularIdentification: {
         hasIdentification: false,
@@ -111,23 +96,16 @@ export function SampleFormProvider({ children }) {
   const [mode, setMode] = useState("add");
   const [editingSampleId, setEditingSampleId] = useState(null);
 
-  const [formData, setFormData] = useState(() => {
-    try {
-      const raw = localStorage.getItem("merobase_draft");
-      return raw ? JSON.parse(raw) : initial;
-    } catch {
-      return initial;
-    }
-  });
+  /* ✅ Always starts blank — no localStorage draft */
+  const [formData, setFormData] = useState(initial);
 
-  /* ================= AUTOSAVE ================= */
-  useEffect(() => {
-    try {
-      localStorage.setItem("merobase_draft", JSON.stringify(formData));
-    } catch (err) {
-      console.warn("Autosave skipped:", err);
-    }
-  }, [formData]);
+  /* ================= AUTO GENERATE SAMPLE ID ================= */
+  const computedSampleId = generateSampleId(
+    formData.metadata?.sampleType,
+    formData.metadata?.projectType,
+    formData.metadata?.projectNumber,
+    formData.metadata?.sampleNumber
+  );
 
   /* ================= HELPERS ================= */
   const updateSection = (section, value) => {
@@ -146,12 +124,12 @@ export function SampleFormProvider({ children }) {
 
   /* ================= EDIT MODE ================= */
   const loadSampleForEdit = (sample) => {
-    if (!sample?.metadata?.sampleId) {
+    if (!sample?.metadata?.sampleId && !sample?.sample_id) {
       console.error("Invalid sample for edit");
       return;
     }
     setMode("edit");
-    setEditingSampleId(sample.metadata.sampleId);
+    setEditingSampleId(sample.metadata?.sampleId || sample.sample_id);
     setFormData(sample);
   };
 
@@ -162,7 +140,6 @@ export function SampleFormProvider({ children }) {
 
   /* ================= CLEAR ================= */
   const clearDraftOnly = () => {
-    localStorage.removeItem("merobase_draft");
     setFormData(initial);
     setMode("add");
     setEditingSampleId(null);
@@ -172,8 +149,10 @@ export function SampleFormProvider({ children }) {
   const submitSample = async () => {
     const { metadata, morphology, microbiology, molecular, publication } = formData;
 
+    const sampleId = computedSampleId || `SAMPLE-${Date.now()}`;
+
     const payload = {
-      sample_id: metadata.sampleId || `SAMPLE-${Date.now()}`,
+      sample_id: sampleId,
       sample_name: metadata.sampleName,
       sample_type: metadata.sampleType,
       project_type: metadata.projectType,
@@ -218,11 +197,11 @@ export function SampleFormProvider({ children }) {
         setSection,
         mode,
         editingSampleId,
+        computedSampleId,
         loadSampleForEdit,
         submitSample,
         clearDraftOnly,
         exitEditMode,
-        // Keep old name as alias so old code doesn't break yet
         submitSampleToLocalStorage: submitSample,
       }}
     >

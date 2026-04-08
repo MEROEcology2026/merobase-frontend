@@ -13,18 +13,16 @@ import "react-date-range/dist/theme/default.css";
 
 export default function SearchSample() {
   const navigate = useNavigate();
-  const { loadSampleForEdit } = useSampleFormContext();
+  const { loadSampleForEdit, clearDraftOnly } = useSampleFormContext();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [samples, setSamples] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  /* ================= FILTER STATES ================= */
   const [query, setQuery] = useState("");
   const [kingdom, setKingdom] = useState("");
   const [projectType, setProjectType] = useState("");
   const [sampleType, setSampleType] = useState("");
 
-  /* ===== Date Range ===== */
   const [showPicker, setShowPicker] = useState(false);
   const pickerRef = useRef(null);
   const [range, setRange] = useState([
@@ -65,6 +63,47 @@ export default function SearchSample() {
     navigate("/");
   };
 
+  /* ================= EDIT HANDLER ================= */
+  const handleEdit = async (sample) => {
+    try {
+      const res = await samplesAPI.getById(sample.sample_id);
+      const full = res.data.data;
+      loadSampleForEdit({
+        metadata: {
+          sampleId: full.sample_id,
+          sampleName: full.sample_name,
+          sampleType: full.sample_type,
+          projectType: full.project_type,
+          projectNumber: full.project_number,
+          sampleNumber: full.sample_number,
+          diveSite: full.dive_site,
+          collectorName: full.collector_name,
+          collectionDate: full.collection_date?.split("T")[0] || "",
+          latitude: full.latitude,
+          longitude: full.longitude,
+          storageLocation: full.storage_location,
+          kingdom: full.kingdom,
+          genus: full.genus,
+          family: full.family,
+          species: full.species,
+          depth: full.depth,
+          temperature: full.temperature,
+          substrate: full.substrate,
+          sampleLength: full.sample_length,
+        },
+        morphology: full.morphology || {},
+        microbiology: full.microbiology || {},
+        molecular: full.molecular || {},
+        publication: full.publication || { links: [] },
+      });
+      /* ✅ FIXED: pass fromEdit state so wizard doesn't reset */
+      navigate("/add/step1", { state: { fromEdit: true } });
+    } catch (err) {
+      console.error("Failed to load sample for edit:", err);
+      alert("Failed to load sample. Please try again.");
+    }
+  };
+
   /* ================= DROPDOWN OPTIONS ================= */
   const kingdoms = useMemo(
     () => [...new Set(samples.map(s => s.kingdom).filter(Boolean))],
@@ -81,7 +120,7 @@ export default function SearchSample() {
     return samples.filter(sample => {
       const searchable = [
         sample.sample_name, sample.species, sample.collector_name,
-        sample.dive_site, sample.kingdom, sample.project_type
+        sample.dive_site, sample.kingdom, sample.project_type, sample.sample_id
       ].filter(Boolean).join(" ").toLowerCase();
 
       const matchesQuery = searchable.includes(query.toLowerCase());
@@ -111,14 +150,19 @@ export default function SearchSample() {
         </div>
 
         <nav className="flex flex-col mt-4 flex-1">
-          <SidebarButton icon={<LayoutDashboard className="text-blue-600" />} label="Dashboard" open={sidebarOpen} onClick={() => navigate("/dashboard")} />
-          <SidebarButton icon={<PlusCircle className="text-green-600" />} label="Add Sample" open={sidebarOpen} onClick={() => navigate("/add/step1")} />
-          <SidebarButton icon={<Edit3 className="text-yellow-600" />} label="Edit Sample" open={sidebarOpen} onClick={() => navigate("/editsample")} />
-          <SidebarButton icon={<SearchIcon className="text-purple-600" />} label="Search Sample" open={sidebarOpen} active />
+          <SidebarButton icon={<LayoutDashboard className="text-blue-600" />} label="Dashboard"
+            open={sidebarOpen} onClick={() => navigate("/dashboard")} />
+          <SidebarButton icon={<PlusCircle className="text-green-600" />} label="Add Sample"
+            open={sidebarOpen} onClick={() => { clearDraftOnly(); navigate("/add/step1"); }} />
+          <SidebarButton icon={<Edit3 className="text-yellow-600" />} label="Edit Sample"
+            open={sidebarOpen} onClick={() => navigate("/editsample")} />
+          <SidebarButton icon={<SearchIcon className="text-purple-600" />} label="Search Sample"
+            open={sidebarOpen} active />
         </nav>
 
         <div className="p-2 border-t">
-          <SidebarButton icon={<LogOut className="text-red-500" />} label="Logout" open={sidebarOpen} onClick={handleLogout} />
+          <SidebarButton icon={<LogOut className="text-red-500" />} label="Logout"
+            open={sidebarOpen} onClick={handleLogout} />
         </div>
       </aside>
 
@@ -131,13 +175,9 @@ export default function SearchSample() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="relative">
               <SearchIcon size={18} className="absolute left-3 top-3 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by any keyword..."
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                className="pl-10 w-full border rounded-lg px-3 py-2"
-              />
+              <input type="text" placeholder="Search by any keyword..."
+                value={query} onChange={e => setQuery(e.target.value)}
+                className="pl-10 w-full border rounded-lg px-3 py-2" />
             </div>
 
             <select value={kingdom} onChange={e => setKingdom(e.target.value)} className="border rounded-lg px-3 py-2">
@@ -161,19 +201,15 @@ export default function SearchSample() {
                 <Calendar size={14} /> Collection Date
               </label>
               <div className="flex gap-2">
-                <button
-                  onClick={() => setShowPicker(!showPicker)}
-                  className="flex-1 px-4 py-2 border rounded-lg text-left bg-white text-sm"
-                >
+                <button onClick={() => setShowPicker(!showPicker)}
+                  className="flex-1 px-4 py-2 border rounded-lg text-left bg-white text-sm">
                   {range[0].startDate && range[0].endDate
                     ? `${range[0].startDate.toLocaleDateString()} – ${range[0].endDate.toLocaleDateString()}`
                     : "Select date range"}
                 </button>
                 {range[0].startDate && (
-                  <button
-                    onClick={() => setRange([{ startDate: null, endDate: null, key: "selection" }])}
-                    className="px-3 py-2 text-sm bg-gray-200 rounded-lg hover:bg-gray-300"
-                  >
+                  <button onClick={() => setRange([{ startDate: null, endDate: null, key: "selection" }])}
+                    className="px-3 py-2 text-sm bg-gray-200 rounded-lg hover:bg-gray-300">
                     Clear
                   </button>
                 )}
@@ -196,10 +232,9 @@ export default function SearchSample() {
               <p className="text-gray-500 italic col-span-full">No samples found.</p>
             ) : (
               filteredSamples.map(sample => (
-                <div
-                  key={sample.sample_id}
-                  className="bg-white rounded-xl shadow p-5 hover:shadow-lg transition"
-                >
+                <div key={sample.sample_id}
+                  className="bg-white rounded-xl shadow p-5 hover:shadow-lg transition">
+                  <p className="text-xs font-mono text-blue-600 mb-1">{sample.sample_id}</p>
                   <h3 className="text-lg font-semibold mb-2">
                     {sample.sample_name || "Unnamed Sample"}
                   </h3>
@@ -212,17 +247,12 @@ export default function SearchSample() {
                   <div className="flex gap-3 mt-4">
                     <button
                       onClick={() => navigate(`/sampledetails/${sample.sample_id}`)}
-                      className="flex-1 px-3 py-2 text-sm bg-blue-600 text-white rounded"
-                    >
+                      className="flex-1 px-3 py-2 text-sm bg-blue-600 text-white rounded">
                       Details
                     </button>
                     <button
-                      onClick={() => {
-                        loadSampleForEdit(sample);
-                        navigate("/add/step1");
-                      }}
-                      className="flex-1 px-3 py-2 text-sm bg-gray-200 rounded"
-                    >
+                      onClick={() => handleEdit(sample)}
+                      className="flex-1 px-3 py-2 text-sm bg-yellow-500 text-white rounded">
                       Edit
                     </button>
                   </div>
@@ -238,11 +268,9 @@ export default function SearchSample() {
 
 function SidebarButton({ icon, label, open, onClick, active }) {
   return (
-    <button
-      onClick={onClick}
+    <button onClick={onClick}
       className={`flex items-center gap-3 w-full px-4 py-3 rounded-lg transition
-        ${active ? "bg-purple-50" : "hover:bg-gray-100"}`}
-    >
+        ${active ? "bg-purple-50" : "hover:bg-gray-100"}`}>
       {icon}
       {open && <span className="text-gray-700">{label}</span>}
     </button>

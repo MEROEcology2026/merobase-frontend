@@ -4,6 +4,7 @@ import "leaflet/dist/leaflet.css";
 import FormProgressBar from "../../components/FormProgressBar";
 import FileDropzone from "../../components/FileDropzone";
 import { useSampleForm } from "../../context/SampleFormContext";
+import { generateSampleId } from "../../utils/sampleIdGenerator";
 
 const SAMPLE_TYPES = ["Biological", "Non-Biological"];
 const DIVE_SITES = [
@@ -29,9 +30,7 @@ const STORAGE_LOCATIONS = [
 function FlyToLocation({ coords }) {
   const map = useMap();
   useEffect(() => {
-    if (coords) {
-      map.flyTo(coords, 15, { duration: 1.5 });
-    }
+    if (coords) map.flyTo(coords, 15, { duration: 1.5 });
   }, [coords, map]);
   return null;
 }
@@ -74,6 +73,14 @@ export default function Step1_Metadata() {
 
   const toggle = (key) => setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
   const setValue = (field, value) => updateSection("metadata", { [field]: value });
+
+  /* ================= LIVE SAMPLE ID ================= */
+  const previewId = generateSampleId(
+    metadata.sampleType,
+    metadata.projectType,
+    metadata.projectNumber,
+    metadata.sampleNumber
+  );
 
   /* ================= SEARCH HANDLER ================= */
   const handleSearch = async () => {
@@ -123,6 +130,29 @@ export default function Step1_Metadata() {
         <h1 className="text-2xl font-bold">Base Sample Metadata</h1>
         <p className="text-sm text-gray-500">Core information describing the collected sample</p>
       </header>
+
+      {/* ================= SAMPLE ID PREVIEW ================= */}
+      <div className={`rounded-xl px-5 py-4 flex items-center justify-between ${
+        previewId
+          ? "bg-blue-50 border border-blue-200"
+          : "bg-gray-50 border border-gray-200"
+      }`}>
+        <div>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+            Auto-generated Sample ID
+          </p>
+          <p className={`text-xl font-bold font-mono ${
+            previewId ? "text-blue-700" : "text-gray-400"
+          }`}>
+            {previewId || "Fill in Sample Type, Project Type, Project Number and Sample Number"}
+          </p>
+        </div>
+        {previewId && (
+          <div className="bg-blue-600 text-white text-xs px-3 py-1 rounded-full font-medium">
+            Ready
+          </div>
+        )}
+      </div>
 
       {/* ================= SAMPLE PHOTO ================= */}
       <Box title="Sample Photo" open={open.photo} toggle={() => toggle("photo")}>
@@ -195,8 +225,6 @@ export default function Step1_Metadata() {
 
       {/* ================= MAP ================= */}
       <Box title="Map Location Picker" open={open.map} toggle={() => toggle("map")}>
-
-        {/* ================= SEARCH BAR ================= */}
         <div ref={searchRef} className="relative mb-4">
           <div className="flex gap-2">
             <input
@@ -207,39 +235,27 @@ export default function Step1_Metadata() {
               placeholder="Search location (e.g. Tulamben, Bali)..."
               className="flex-1 rounded-lg border px-3 py-2 text-base focus:ring-2 focus:ring-blue-400 focus:outline-none"
             />
-            <button
-              type="button"
-              onClick={handleSearch}
-              disabled={searching}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:bg-blue-300 transition"
-            >
+            <button type="button" onClick={handleSearch} disabled={searching}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:bg-blue-300 transition">
               {searching ? "Searching..." : "Search"}
             </button>
           </div>
-
-          {/* Search Results Dropdown */}
           {searchResults.length > 0 && (
             <div className="absolute z-50 w-full bg-white border rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
               {searchResults.map((result) => (
-                <button
-                  key={result.place_id}
-                  type="button"
+                <button key={result.place_id} type="button"
                   onClick={() => handleSelectResult(result)}
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-blue-50 border-b last:border-0 transition"
-                >
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-blue-50 border-b last:border-0 transition">
                   <p className="font-medium text-gray-800 truncate">
                     {result.display_name.split(",")[0]}
                   </p>
-                  <p className="text-xs text-gray-500 truncate">
-                    {result.display_name}
-                  </p>
+                  <p className="text-xs text-gray-500 truncate">{result.display_name}</p>
                 </button>
               ))}
             </div>
           )}
         </div>
 
-        {/* ================= MAP ================= */}
         <div className="h-64 rounded-xl overflow-hidden mb-4">
           <MapContainer center={[-8.34, 115.54]} zoom={12} className="h-full w-full">
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />

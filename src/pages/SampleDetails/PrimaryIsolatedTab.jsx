@@ -8,33 +8,29 @@ export default function PrimaryIsolatedTab({ primary }) {
     ? primary
     : primary.primaryIsolatedRuns || [];
 
-  /* Old single object structure fallback */
   const isSingleEntry = !Array.isArray(primary) && primary.isolatedId;
 
   if (isSingleEntry) {
     return (
       <div className="space-y-4">
-        <div className="border rounded-lg p-4 bg-gray-50">
-          <div className="flex items-center gap-3 mb-3">
-            <span className="text-xs font-semibold text-blue-500 uppercase tracking-wider">
-              Isolated ID
-            </span>
-            <span className="font-mono font-bold text-blue-700 text-sm">
+        <div className="bg-white border border-gray-100 rounded-xl p-5">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="font-mono text-sm font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
               {primary.isolatedId}
             </span>
           </div>
-          <InfoGrid>
-            <Info label="Shelf" value={primary.shelf} />
-            <Info label="Position in Box" value={primary.positionInBox} />
-            <Info label="Storage Temperature" value={primary.storageTemperature} />
-            <Info label="Agar Media" value={primary.agarMedia} />
-            <Info label="Solvent" value={primary.solvent} />
-            <Info label="Incubation Temperature" value={primary.incubationTemperature} />
-            <Info label="Incubation Time" value={primary.incubationTime} />
-            <Info label="Oxygen Requirement" value={primary.oxygenRequirement} />
-          </InfoGrid>
+          <div className="space-y-3">
+            <Row label="Shelf" value={primary.shelf} />
+            <Row label="Position in box" value={primary.positionInBox} />
+            <Row label="Storage temperature" value={primary.storageTemperature} />
+            <Row label="Agar media" value={primary.agarMedia} />
+            <Row label="Solvent" value={primary.solvent} />
+            <Row label="Incubation temperature" value={primary.incubationTemperature} />
+            <Row label="Incubation time" value={primary.incubationTime} />
+            <Row label="Oxygen requirement" value={primary.oxygenRequirement} />
+          </div>
           {primary.notes && (
-            <p className="text-xs text-gray-500 mt-3 italic">Notes: {primary.notes}</p>
+            <p className="text-xs text-gray-400 mt-4 italic border-t pt-3">{primary.notes}</p>
           )}
         </div>
       </div>
@@ -42,61 +38,74 @@ export default function PrimaryIsolatedTab({ primary }) {
   }
 
   if (runs.length === 0) {
-    return <p className="text-sm text-gray-400 italic">No primary isolated entries recorded.</p>;
+    return (
+      <div className="bg-white border border-gray-100 rounded-xl p-8 text-center">
+        <p className="text-sm text-gray-400 italic">No primary isolated entries recorded.</p>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4">
       {runs.map((run, index) => (
-        <div key={run.id || index} className="border rounded-lg p-4 bg-gray-50">
+        <div key={run.id || index} className="bg-white border border-gray-100 rounded-xl p-5">
 
           {/* ================= RUN HEADER ================= */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-semibold text-gray-700">
-                Entry #{index + 1}
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-sm font-medium text-gray-600">
+              Entry #{index + 1}
+            </span>
+            {run.isolatedType && (
+              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                run.isolatedType === "Fungi"
+                  ? "bg-green-50 text-green-700"
+                  : "bg-purple-50 text-purple-700"
+              }`}>
+                {run.isolatedType === "Fungi" ? "Fungi (FNG)" : "Bacteria (BCT)"}
               </span>
-              {run.isolatedType && (
-                <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                  run.isolatedType === "Fungi"
-                    ? "bg-green-100 text-green-700"
-                    : "bg-blue-100 text-blue-700"
-                }`}>
-                  {run.isolatedType === "Fungi" ? "Fungi (FNG)" : "Bacteria (BCT)"}
-                </span>
-              )}
-            </div>
+            )}
           </div>
 
-          {/* ================= AUTO ID ================= */}
+          {/* ================= ISO ID ================= */}
           {run.isolatedId && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 mb-4">
-              <p className="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-0.5">
+            <div className="bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 mb-4">
+              <p className="text-xs font-semibold text-blue-400 uppercase tracking-wider mb-1">
                 Isolated ID
               </p>
-              <p className="font-mono font-bold text-blue-700 text-sm">
+              <p className="font-mono font-semibold text-blue-700 text-sm">
                 {run.isolatedId}
               </p>
             </div>
           )}
 
           {/* ================= FIELDS ================= */}
-          <InfoGrid>
-            <Info label="Shelf" value={run.shelf} />
-            <Info label="Position in Box" value={run.positionInBox} />
-            <Info label="Storage Temperature" value={run.storageTemperature} />
-            <Info label="Agar Media" value={run.agarMedia} />
-            <Info label="Solvent" value={run.solvent} />
-            <Info label="Incubation Temperature" value={run.incubationTemperature} />
-            <Info label="Incubation Time" value={run.incubationTime} />
-            <Info label="Oxygen Requirement" value={run.oxygenRequirement} />
-          </InfoGrid>
+          <div className="space-y-3">
+            <Row label="Shelf" value={run.shelf} />
+            <Row label="Position in box" value={run.positionInBox} />
+            <Row label="Storage temperature" value={run.storageTemperature} />
+            <Row label="Agar media" value={run.agarMedia} />
+            <Row label="Solvent" value={run.solvent} />
+            <Row label="Incubation temperature" value={run.incubationTemperature} />
+            <Row label="Incubation time" value={run.incubationTime} />
+            <Row label="Oxygen requirement" value={run.oxygenRequirement} />
+          </div>
 
           {run.notes && (
-            <p className="text-xs text-gray-500 mt-3 italic">Notes: {run.notes}</p>
+            <p className="text-xs text-gray-400 mt-4 italic border-t pt-3">{run.notes}</p>
           )}
         </div>
       ))}
+    </div>
+  );
+}
+
+/* ================= ROW ================= */
+function Row({ label, value }) {
+  if (!value && value !== 0) return null;
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <span className="text-xs text-gray-400 flex-shrink-0 pt-0.5">{label}</span>
+      <span className="text-sm text-gray-800 text-right">{value}</span>
     </div>
   );
 }

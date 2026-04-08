@@ -1,5 +1,3 @@
-import { InfoGrid, Info } from "./SharedComponents";
-
 export default function MiscTestsTab({ misc }) {
   if (!misc) return null;
 
@@ -11,29 +9,25 @@ export default function MiscTestsTab({ misc }) {
     <div className="space-y-6">
 
       {/* ================= ANTIBACTERIAL RUNS ================= */}
-      <div>
-        <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3">
-          Antibacterial Assay
-        </h3>
+      <Section title="Antibacterial Assay">
         {antibacterialRuns.length === 0 ? (
-          <p className="text-sm text-gray-400 italic">No antibacterial tests recorded.</p>
+          <Empty />
         ) : (
           <div className="space-y-3">
             {antibacterialRuns.map((run, index) => (
-              <div key={run.id || index} className="border rounded-lg p-4 bg-gray-50">
+              <div key={run.id || index} className="bg-white border border-gray-100 rounded-xl p-5">
 
-                {/* Run header */}
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-semibold text-gray-700">Run #{index + 1}</p>
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="text-sm font-medium text-gray-600">Run #{index + 1}</span>
                 </div>
 
-                {/* Test ID */}
+                {/* Test ID badge */}
                 {run.testId && (
-                  <div className="bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 mb-3">
-                    <div className="flex items-center gap-4">
+                  <div className="bg-purple-50 border border-purple-100 rounded-lg px-4 py-3 mb-4">
+                    <div className="flex flex-wrap items-start gap-6">
                       {run.linkedIsolatedId && (
                         <div>
-                          <p className="text-xs font-semibold text-purple-400 uppercase tracking-wider">
+                          <p className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-1">
                             Linked ISO
                           </p>
                           <p className="font-mono text-xs text-purple-600">
@@ -42,10 +36,10 @@ export default function MiscTestsTab({ misc }) {
                         </div>
                       )}
                       <div>
-                        <p className="text-xs font-semibold text-purple-500 uppercase tracking-wider">
+                        <p className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-1">
                           Test ID
                         </p>
-                        <p className="font-mono font-bold text-purple-700 text-sm">
+                        <p className="font-mono font-semibold text-purple-700 text-sm">
                           {run.testId}
                         </p>
                       </div>
@@ -53,33 +47,27 @@ export default function MiscTestsTab({ misc }) {
                   </div>
                 )}
 
-                <InfoGrid>
-                  <Info label="Pathogen" value={run.pathogen} />
-                  <Info label="Method" value={run.method} />
-                  <Info label="Activity Level" value={run.activityLevel} />
-                  <Info label="Antimalarial Assay" value={run.antimalarialAssay} />
-                </InfoGrid>
-                {run.activityNotes && (
-                  <div className="mt-2">
-                    <Info label="Activity Notes" value={run.activityNotes} />
-                  </div>
-                )}
+                <div className="space-y-3">
+                  <Row label="Pathogen" value={run.pathogen} />
+                  <Row label="Method" value={run.method} />
+                  <Row label="Activity level" value={run.activityLevel} />
+                  <Row label="Activity notes" value={run.activityNotes} />
+                  <Row label="Antimalarial assay" value={run.antimalarialAssay} />
+                </div>
+
                 {run.notes && (
-                  <p className="text-xs text-gray-500 mt-2 italic">Notes: {run.notes}</p>
+                  <p className="text-xs text-gray-400 mt-4 italic border-t pt-3">{run.notes}</p>
                 )}
               </div>
             ))}
           </div>
         )}
-      </div>
+      </Section>
 
       {/* ================= BIOCHEMICAL RUNS ================= */}
-      <div>
-        <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3">
-          Biochemical Tests
-        </h3>
+      <Section title="Biochemical Tests">
         {biochemicalRuns.length === 0 ? (
-          <p className="text-sm text-gray-400 italic">No biochemical tests recorded.</p>
+          <Empty />
         ) : (
           <div className="space-y-3">
             {biochemicalRuns.map((run, index) => (
@@ -87,15 +75,12 @@ export default function MiscTestsTab({ misc }) {
             ))}
           </div>
         )}
-      </div>
+      </Section>
 
       {/* ================= ENZYMATIC RUNS ================= */}
-      <div>
-        <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3">
-          Enzymatic Tests
-        </h3>
+      <Section title="Enzymatic Tests">
         {enzymaticRuns.length === 0 ? (
-          <p className="text-sm text-gray-400 italic">No enzymatic tests recorded.</p>
+          <Empty />
         ) : (
           <div className="space-y-3">
             {enzymaticRuns.map((run, index) => (
@@ -103,32 +88,32 @@ export default function MiscTestsTab({ misc }) {
             ))}
           </div>
         )}
-      </div>
+      </Section>
 
       {/* ================= MOLECULAR IDENTIFICATION ================= */}
       {misc?.molecularIdentification?.hasIdentification && (
-        <div>
-          <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3">
-            Molecular Identification
-          </h3>
-          <InfoGrid>
-            <Info label="Species Name" value={misc.molecularIdentification?.speciesName} />
-            <Info label="PCR Platform" value={misc.molecularIdentification?.pcrPlatform} />
-            <Info label="PCR Protocol" value={misc.molecularIdentification?.pcrProtocolType} />
-            <Info label="Sequencing Method" value={misc.molecularIdentification?.sequencingMethod} />
-            <Info label="Bioinformatics Pipeline" value={misc.molecularIdentification?.bioinformaticsPipeline} />
-            <Info label="Accession Status" value={misc.molecularIdentification?.accessionStatus} />
-            <Info label="Accession Number" value={misc.molecularIdentification?.accessionNumber} />
-          </InfoGrid>
-        </div>
+        <Section title="Molecular Identification">
+          <div className="bg-white border border-gray-100 rounded-xl p-5">
+            <div className="space-y-3">
+              <Row label="Species name" value={misc.molecularIdentification?.speciesName} />
+              <Row label="PCR platform" value={misc.molecularIdentification?.pcrPlatform} />
+              <Row label="PCR protocol" value={misc.molecularIdentification?.pcrProtocolType} />
+              <Row label="Sequencing method" value={misc.molecularIdentification?.sequencingMethod} />
+              <Row label="Bioinformatics pipeline" value={misc.molecularIdentification?.bioinformaticsPipeline} />
+              <Row label="Accession status" value={misc.molecularIdentification?.accessionStatus} />
+              <Row label="Accession number" value={misc.molecularIdentification?.accessionNumber} />
+            </div>
+          </div>
+        </Section>
       )}
 
       {/* ================= TEST NOTES ================= */}
       {misc?.testNotes && (
-        <div>
-          <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">General Notes</h3>
-          <p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3">{misc.testNotes}</p>
-        </div>
+        <Section title="General Notes">
+          <div className="bg-white border border-gray-100 rounded-xl p-5">
+            <p className="text-sm text-gray-700">{misc.testNotes}</p>
+          </div>
+        </Section>
       )}
     </div>
   );
@@ -142,7 +127,7 @@ function RunDisplay({ run, index, color }) {
     .map(t => t.name);
   const allTests = [...new Set([...checkedDefaults, ...checkedCustom])];
 
-  const colorMap = {
+  const tagMap = {
     green: "bg-green-50 text-green-700",
     purple: "bg-purple-50 text-purple-700",
   };
@@ -152,20 +137,18 @@ function RunDisplay({ run, index, color }) {
   };
 
   return (
-    <div className="border rounded-lg p-4 bg-gray-50">
-
-      {/* Run header */}
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-sm font-semibold text-gray-700">Run #{index + 1}</p>
+    <div className="bg-white border border-gray-100 rounded-xl p-5">
+      <div className="flex items-center gap-3 mb-4">
+        <span className="text-sm font-medium text-gray-600">Run #{index + 1}</span>
       </div>
 
-      {/* Test ID */}
+      {/* Test ID badge */}
       {run.testId && (
-        <div className="bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 mb-3">
-          <div className="flex items-center gap-4">
+        <div className="bg-purple-50 border border-purple-100 rounded-lg px-4 py-3 mb-4">
+          <div className="flex flex-wrap items-start gap-6">
             {run.linkedIsolatedId && (
               <div>
-                <p className="text-xs font-semibold text-purple-400 uppercase tracking-wider">
+                <p className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-1">
                   Linked ISO
                 </p>
                 <p className="font-mono text-xs text-purple-600">
@@ -174,10 +157,10 @@ function RunDisplay({ run, index, color }) {
               </div>
             )}
             <div>
-              <p className="text-xs font-semibold text-purple-500 uppercase tracking-wider">
+              <p className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-1">
                 Test ID
               </p>
-              <p className="font-mono font-bold text-purple-700 text-sm">
+              <p className="font-mono font-semibold text-purple-700 text-sm">
                 {run.testId}
               </p>
             </div>
@@ -185,15 +168,15 @@ function RunDisplay({ run, index, color }) {
         </div>
       )}
 
-      {/* Tests */}
+      {/* Test tags */}
       {allTests.length === 0 ? (
         <p className="text-sm text-gray-400 italic">No tests checked.</p>
       ) : (
         <div className="flex flex-wrap gap-2 mb-2">
           {allTests.map((test) => (
             <span key={test}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${colorMap[color]}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${dotMap[color]}`} />
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${tagMap[color]}`}>
+              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dotMap[color]}`} />
               {test}
             </span>
           ))}
@@ -201,8 +184,34 @@ function RunDisplay({ run, index, color }) {
       )}
 
       {run.notes && (
-        <p className="text-xs text-gray-500 mt-2 italic">Notes: {run.notes}</p>
+        <p className="text-xs text-gray-400 mt-4 italic border-t pt-3">{run.notes}</p>
       )}
     </div>
   );
+}
+
+/* ================= HELPERS ================= */
+function Section({ title, children }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+        {title}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+function Row({ label, value }) {
+  if (!value && value !== 0) return null;
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <span className="text-xs text-gray-400 flex-shrink-0 pt-0.5">{label}</span>
+      <span className="text-sm text-gray-800 text-right">{value}</span>
+    </div>
+  );
+}
+
+function Empty() {
+  return <p className="text-sm text-gray-400 italic">No data recorded.</p>;
 }

@@ -14,6 +14,7 @@ const initial = {
     sampleName: "",
     sampleType: "Biological",
     projectType: "A",
+    partOfSample: "",
     projectNumber: "",
     sampleNumber: "",
     diveSite: "",
@@ -37,14 +38,10 @@ const initial = {
   },
   microbiology: {
     primaryIsolatedRuns: [],
-    isolatedMorphology: {
-      macroscopic: { shape: "", arrangement: "", images: [] },
-      colonyDescription: {
-        shape: "", margin: "", elevation: "",
-        color: "", texture: "", motility: ""
-      },
-      microscopic: { shape: "", arrangement: "", gramReaction: "", images: [] }
-    },
+
+    /* ✅ CHANGED: isolatedMorphology is now an array of runs */
+    isolatedMorphologyRuns: [],
+
     microbiologyTests: {
       antibacterialRuns: [],
       biochemicalRuns: [],
@@ -100,9 +97,11 @@ export function SampleFormProvider({ children }) {
   const [formData, setFormData] = useState(initial);
 
   /* ================= AUTO GENERATE SAMPLE ID ================= */
+  /* ✅ UPDATED: now includes partOfSample */
   const computedSampleId = generateSampleId(
     formData.metadata?.sampleType,
     formData.metadata?.projectType,
+    formData.metadata?.partOfSample,
     formData.metadata?.projectNumber,
     formData.metadata?.sampleNumber
   );
@@ -156,6 +155,7 @@ export function SampleFormProvider({ children }) {
       sample_name: metadata.sampleName,
       sample_type: metadata.sampleType,
       project_type: metadata.projectType,
+      part_of_sample: metadata.partOfSample,
       project_number: metadata.projectNumber,
       sample_number: metadata.sampleNumber,
       dive_site: metadata.diveSite,

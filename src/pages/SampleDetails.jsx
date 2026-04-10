@@ -16,13 +16,17 @@ import MolecularTab from "./SampleDetails/MolecularTab";
 import PublicationTab from "./SampleDetails/PublicationTab";
 
 const TABS = [
-  { id: "metadata",   label: "Metadata" },
+  { id: "metadata",     label: "Metadata" },
+  { id: "microbiology", label: "Microbiology" },
+  { id: "morphology",   label: "Morphology" },
+  { id: "molecular",    label: "Molecular" },
+  { id: "publication",  label: "Publication" },
+];
+
+const MICRO_SUBTABS = [
   { id: "isolated",   label: "Primary Isolated" },
-  { id: "morphology", label: "Morphology" },
   { id: "isomorpho",  label: "Isolated Morphology" },
   { id: "tests",      label: "Microbiology Tests" },
-  { id: "molecular",  label: "Molecular" },
-  { id: "publication",label: "Publication" },
 ];
 
 export default function SampleDetails() {
@@ -34,6 +38,7 @@ export default function SampleDetails() {
   const [sample, setSample] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("metadata");
+  const [activeMicroTab, setActiveMicroTab] = useState("isolated");
 
   /* ================= LOAD FROM API ================= */
   useEffect(() => {
@@ -78,6 +83,7 @@ export default function SampleDetails() {
         sampleId: sample.sample_id,
         sampleName: sample.sample_name,
         sampleType: sample.sample_type,
+        partOfSample: sample.part_of_sample,
         projectType: sample.project_type,
         projectNumber: sample.project_number,
         sampleNumber: sample.sample_number,
@@ -125,11 +131,12 @@ export default function SampleDetails() {
     );
   }
 
-  /* ================= MAP API RESPONSE TO TAB FORMAT ================= */
+  /* ================= MAP API RESPONSE ================= */
   const metadata = {
     sampleId: sample.sample_id,
     sampleName: sample.sample_name,
     sampleType: sample.sample_type,
+    partOfSample: sample.part_of_sample,
     projectType: sample.project_type,
     projectNumber: sample.project_number,
     sampleNumber: sample.sample_number,
@@ -202,19 +209,17 @@ export default function SampleDetails() {
 
         {/* ================= HERO ================= */}
         <div className="bg-white border-b px-8 py-6">
-          <div className="flex items-start justify-between gap-4 mb-4">
-            <div>
-              <span className="inline-block font-mono text-xs text-blue-600 bg-blue-50 px-3 py-1 rounded-full mb-2">
-                {sample.sample_id}
-              </span>
-              <h1 className="text-2xl font-semibold text-gray-900">
-                {sample.sample_name || "Unnamed Sample"}
-              </h1>
-              <p className="text-sm text-gray-500 mt-1">
-                {[sample.collector_name, sample.collection_date?.split("T")[0]]
-                  .filter(Boolean).join(" · ")}
-              </p>
-            </div>
+          <div className="mb-4">
+            <span className="inline-block font-mono text-xs text-blue-600 bg-blue-50 px-3 py-1 rounded-full mb-2">
+              {sample.sample_id}
+            </span>
+            <h1 className="text-2xl font-semibold text-gray-900">
+              {sample.sample_name || "Unnamed Sample"}
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              {[sample.collector_name, sample.collection_date?.split("T")[0]]
+                .filter(Boolean).join(" · ")}
+            </p>
           </div>
 
           {/* Badges */}
@@ -239,9 +244,9 @@ export default function SampleDetails() {
                 {sample.dive_site}
               </span>
             )}
-            {sample.substrate && (
+            {sample.part_of_sample && (
               <span className="text-xs px-3 py-1 rounded-full bg-gray-100 text-gray-600 font-medium">
-                {sample.substrate}
+                {sample.part_of_sample}
               </span>
             )}
           </div>
@@ -255,7 +260,7 @@ export default function SampleDetails() {
           </div>
         </div>
 
-        {/* ================= TABS ================= */}
+        {/* ================= MAIN TABS ================= */}
         <div className="bg-white border-b px-8 overflow-x-auto">
           <div className="flex gap-0">
             {TABS.map((tab) => (
@@ -278,20 +283,40 @@ export default function SampleDetails() {
             <MetadataTab metadata={metadata} />
           )}
 
-          {activeTab === "isolated" && (
-            <PrimaryIsolatedTab primary={isolatedRuns} />
+          {/* ================= MICROBIOLOGY TAB ================= */}
+          {activeTab === "microbiology" && (
+            <div>
+              {/* Sub tabs */}
+              <div className="flex gap-0 border-b mb-6">
+                {MICRO_SUBTABS.map((sub) => (
+                  <button key={sub.id} onClick={() => setActiveMicroTab(sub.id)}
+                    className={`px-4 py-2.5 text-sm whitespace-nowrap border-b-2 transition -mb-px ${
+                      activeMicroTab === sub.id
+                        ? "border-blue-600 text-blue-600 font-medium"
+                        : "border-transparent text-gray-500 hover:text-gray-800"
+                    }`}>
+                    {sub.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Sub tab content */}
+              {activeMicroTab === "isolated" && (
+                <PrimaryIsolatedTab primary={isolatedRuns} />
+              )}
+              {activeMicroTab === "isomorpho" && (
+                <IsolatedMorphologyTab
+                  isolatedMorphologyRuns={sample.microbiology?.isolatedMorphologyRuns}
+                />
+              )}
+              {activeMicroTab === "tests" && (
+                <MiscTestsTab misc={sample.microbiology?.microbiologyTests} />
+              )}
+            </div>
           )}
 
           {activeTab === "morphology" && (
             <MorphologyTab morphology={sample.morphology} />
-          )}
-
-          {activeTab === "isomorpho" && (
-            <IsolatedMorphologyTab isolated={sample.microbiology?.isolatedMorphology} />
-          )}
-
-          {activeTab === "tests" && (
-            <MiscTestsTab misc={sample.microbiology?.microbiologyTests} />
           )}
 
           {activeTab === "molecular" && (

@@ -21,30 +21,49 @@ const PATHOGENS = [
   "Aeromonas hydrophila", "Vibrio parahaemolyticus"
 ];
 
-const METHODS = [
+const ANTIBACTERIAL_METHODS = [
   "Disk diffusion / Kirby bauer", "Agar Well diffusion",
   "Agar plug diffusion", "Soft-agar overlay"
 ];
 
+const PLASMODIUM_SPECIES = [
+  "Plasmodium berghei",
+  "Plasmodium falciparum",
+];
+
+const ANTIMALARIAL_METHODS = [
+  "Disk diffusion",
+  "Agar Well diffusion",
+  "Micro dilution",
+];
+
 const ACTIVITY_LEVELS = ["Low", "Medium", "High"];
-const ANTIMALARIAL_OPTIONS = ["Plasmodium berghei", "Plasmodium falciparum"];
 
 /* ================= EMPTY RUN FACTORIES ================= */
-const createAntibacterialRun = (isolatedId, testId) => ({
+const createAntibacterialRun = (isoMorId, testId) => ({
   id: crypto.randomUUID(),
-  linkedIsolatedId: isolatedId || "",
+  linkedIsoMorId: isoMorId || "",
   testId: testId || "",
   pathogen: "",
   method: "",
   activityLevel: "",
   activityNotes: "",
-  antimalarialAssay: "",
   notes: "",
 });
 
-const createTestRun = (isolatedId, testId) => ({
+const createAntimalarialRun = (isoMorId, testId) => ({
   id: crypto.randomUUID(),
-  linkedIsolatedId: isolatedId || "",
+  linkedIsoMorId: isoMorId || "",
+  testId: testId || "",
+  plasmodiumSpecies: "",
+  method: "",
+  activityLevel: "",
+  notes: "",
+});
+
+const createTestRun = (isoMorId, testId) => ({
+  id: crypto.randomUUID(),
+  linkedIsoMorId: isoMorId || "",
   testId: testId || "",
   notes: "",
   checked: [],
@@ -55,18 +74,18 @@ export default function Step3C_Misc() {
   const { formData, updateSection } = useSampleForm();
   const microTests = formData.microbiology?.microbiologyTests || {};
 
-  /* ================= GET PRIMARY ISOLATED RUNS FOR SELECTOR ================= */
-  const isolatedRuns = formData.microbiology?.primaryIsolatedRuns || [];
-  const isolatedOptions = isolatedRuns
-    .filter((r) => r.isolatedId)
-    .map((r) => ({
-      value: r.isolatedId,
-      label: `${r.isolatedId} (${r.isolatedType || "Unknown"})`,
-    }));
+  /* ================= GET ISOMOR RUNS FOR SELECTOR ================= */
+  const isoMorRuns = formData.microbiology?.isolatedMorphologyRuns || [];
+  const isoMorOptions = isoMorRuns
+    .filter((r) => r.isoMorId)
+    .map((r) => ({ value: r.isoMorId, label: r.isoMorId }));
 
   /* ================= RUNS ================= */
   const antibacterialRuns = microTests.antibacterialRuns?.length > 0
     ? microTests.antibacterialRuns : [createAntibacterialRun()];
+
+  const antimalarialRuns = microTests.antimalarialRuns?.length > 0
+    ? microTests.antimalarialRuns : [createAntimalarialRun()];
 
   const biochemicalRuns = microTests.biochemicalRuns?.length > 0
     ? microTests.biochemicalRuns : [createTestRun()];
@@ -76,7 +95,8 @@ export default function Step3C_Misc() {
 
   const molecular = microTests.molecularIdentification || {};
 
-  const [openAssay, setOpenAssay] = useState(true);
+  const [openAntibacterial, setOpenAntibacterial] = useState(true);
+  const [openAntimalarial, setOpenAntimalarial] = useState(true);
   const [openBio, setOpenBio] = useState(true);
   const [openEnzyme, setOpenEnzyme] = useState(true);
   const [openMolecular, setOpenMolecular] = useState(true);
@@ -89,28 +109,32 @@ export default function Step3C_Misc() {
     });
   };
 
-  /* ================= GET NEXT TEST ID FOR AN ISO ================= */
-  const getTestIdForIso = (isolatedId, allRuns) => {
-    const nextIndex = getNextTestIndex(allRuns, isolatedId);
-    return generateTestId(isolatedId, nextIndex);
+  /* ================= GET ALL RUNS (for global TEST counter) ================= */
+  const getAllRuns = () => [
+    ...antibacterialRuns,
+    ...antimalarialRuns,
+    ...biochemicalRuns,
+    ...enzymaticRuns,
+  ];
+
+  /* ================= GET NEXT TEST ID ================= */
+  const getTestId = (isoMorId, excludeRuns = []) => {
+    const allRuns = getAllRuns().filter(r => !excludeRuns.find(x => x.id === r.id));
+    return generateTestId(isoMorId, getNextTestIndex(allRuns));
   };
 
   /* ================= ANTIBACTERIAL RUN HANDLERS ================= */
   const addAntibacterialRun = () => {
-    const firstIsoId = isolatedOptions[0]?.value || "";
-    const testId = firstIsoId
-      ? getTestIdForIso(firstIsoId, [...antibacterialRuns, { linkedIsolatedId: firstIsoId }])
-      : "";
+    const firstIsoMorId = isoMorOptions[0]?.value || "";
+    const testId = firstIsoMorId ? getTestId(firstIsoMorId) : "";
     updateMicroTests({
-      antibacterialRuns: [...antibacterialRuns, createAntibacterialRun(firstIsoId, testId)]
+      antibacterialRuns: [...antibacterialRuns, createAntibacterialRun(firstIsoMorId, testId)]
     });
   };
 
   const removeAntibacterialRun = (id) => {
     if (antibacterialRuns.length <= 1) return;
-    updateMicroTests({
-      antibacterialRuns: antibacterialRuns.filter((r) => r.id !== id)
-    });
+    updateMicroTests({ antibacterialRuns: antibacterialRuns.filter((r) => r.id !== id) });
   };
 
   const updateAntibacterialRun = (id, field, value) => {
@@ -118,11 +142,35 @@ export default function Step3C_Misc() {
       antibacterialRuns: antibacterialRuns.map((r) => {
         if (r.id !== id) return r;
         const updated = { ...r, [field]: value };
-        /* Regenerate TEST ID when ISO link changes */
-        if (field === "linkedIsolatedId" && value) {
-          const others = antibacterialRuns.filter(x => x.id !== id);
-          const nextIndex = getNextTestIndex(others, value);
-          updated.testId = generateTestId(value, nextIndex);
+        if (field === "linkedIsoMorId" && value) {
+          updated.testId = getTestId(value, [r]);
+        }
+        return updated;
+      })
+    });
+  };
+
+  /* ================= ANTIMALARIAL RUN HANDLERS ================= */
+  const addAntimalarialRun = () => {
+    const firstIsoMorId = isoMorOptions[0]?.value || "";
+    const testId = firstIsoMorId ? getTestId(firstIsoMorId) : "";
+    updateMicroTests({
+      antimalarialRuns: [...antimalarialRuns, createAntimalarialRun(firstIsoMorId, testId)]
+    });
+  };
+
+  const removeAntimalarialRun = (id) => {
+    if (antimalarialRuns.length <= 1) return;
+    updateMicroTests({ antimalarialRuns: antimalarialRuns.filter((r) => r.id !== id) });
+  };
+
+  const updateAntimalarialRun = (id, field, value) => {
+    updateMicroTests({
+      antimalarialRuns: antimalarialRuns.map((r) => {
+        if (r.id !== id) return r;
+        const updated = { ...r, [field]: value };
+        if (field === "linkedIsoMorId" && value) {
+          updated.testId = getTestId(value, [r]);
         }
         return updated;
       })
@@ -130,13 +178,11 @@ export default function Step3C_Misc() {
   };
 
   /* ================= TEST RUN HANDLERS ================= */
-  const addRun = (key, currentRuns) => {
-    const firstIsoId = isolatedOptions[0]?.value || "";
-    const testId = firstIsoId
-      ? getTestIdForIso(firstIsoId, [...currentRuns, { linkedIsolatedId: firstIsoId }])
-      : "";
+  const addRun = (key) => {
+    const firstIsoMorId = isoMorOptions[0]?.value || "";
+    const testId = firstIsoMorId ? getTestId(firstIsoMorId) : "";
     const current = microTests[key] || [createTestRun()];
-    updateMicroTests({ [key]: [...current, createTestRun(firstIsoId, testId)] });
+    updateMicroTests({ [key]: [...current, createTestRun(firstIsoMorId, testId)] });
   };
 
   const removeRun = (key, id) => {
@@ -151,11 +197,8 @@ export default function Step3C_Misc() {
       [key]: current.map((r) => {
         if (r.id !== id) return r;
         const updated = { ...r, [field]: value };
-        /* Regenerate TEST ID when ISO link changes */
-        if (field === "linkedIsolatedId" && value) {
-          const others = current.filter(x => x.id !== id);
-          const nextIndex = getNextTestIndex(others, value);
-          updated.testId = generateTestId(value, nextIndex);
+        if (field === "linkedIsoMorId" && value) {
+          updated.testId = getTestId(value, [r]);
         }
         return updated;
       })
@@ -180,10 +223,7 @@ export default function Step3C_Misc() {
     updateMicroTests({
       [key]: current.map((r) => {
         if (r.id !== runId) return r;
-        return {
-          ...r,
-          customTests: [...(r.customTests || []), { id: crypto.randomUUID(), name: "" }]
-        };
+        return { ...r, customTests: [...(r.customTests || []), { id: crypto.randomUUID(), name: "" }] };
       })
     });
   };
@@ -193,12 +233,7 @@ export default function Step3C_Misc() {
     updateMicroTests({
       [key]: current.map((r) => {
         if (r.id !== runId) return r;
-        return {
-          ...r,
-          customTests: r.customTests.map((t) =>
-            t.id === testId ? { ...t, name: value } : t
-          )
-        };
+        return { ...r, customTests: r.customTests.map((t) => t.id === testId ? { ...t, name: value } : t) };
       })
     });
   };
@@ -231,27 +266,24 @@ export default function Step3C_Misc() {
     });
   };
 
-  /* ================= ISO SELECTOR COMPONENT ================= */
-  const IsoSelector = ({ linkedIsolatedId, testId, onChange }) => (
+  /* ================= ISOMOR SELECTOR ================= */
+  const IsoMorSelector = ({ linkedIsoMorId, testId, onChange }) => (
     <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 md:col-span-2">
       <div className="flex items-center gap-2 mb-2">
         <Link size={14} className="text-purple-600" />
         <p className="text-xs font-semibold text-purple-600 uppercase tracking-wider">
-          Link to Primary Isolated Entry
+          Link to Isolated Morphology Entry
         </p>
       </div>
-      {isolatedOptions.length === 0 ? (
+      {isoMorOptions.length === 0 ? (
         <p className="text-xs text-yellow-600 bg-yellow-50 rounded px-3 py-2">
-          No primary isolated entries found — go to Step 3A and add entries first.
+          No isolated morphology entries found — go to Step 3B first.
         </p>
       ) : (
-        <select
-          value={linkedIsolatedId || ""}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full border border-purple-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-purple-400 focus:outline-none"
-        >
-          <option value="">— Select Primary Isolated ID —</option>
-          {isolatedOptions.map((opt) => (
+        <select value={linkedIsoMorId || ""} onChange={(e) => onChange(e.target.value)}
+          className="w-full border border-purple-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-purple-400 focus:outline-none">
+          <option value="">— Select Isolated Morphology ID —</option>
+          {isoMorOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>
@@ -271,17 +303,17 @@ export default function Step3C_Misc() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Microbiology - Miscellaneous</h1>
 
-      {/* ================= ISO WARNING ================= */}
-      {isolatedOptions.length === 0 && (
+      {/* ================= ISOMOR WARNING ================= */}
+      {isoMorOptions.length === 0 && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3">
           <p className="text-yellow-700 text-sm">
-            No primary isolated entries found. Go to Step 3A first to add isolated entries — each test run here should be linked to an isolated entry.
+            No isolated morphology entries found. Go to Step 3B first — each test run must be linked to an isolated morphology entry.
           </p>
         </div>
       )}
 
       {/* ================= ANTIBACTERIAL ASSAY ================= */}
-      <CollapsibleBox title="Antibacterial Assay" open={openAssay} setOpen={setOpenAssay}>
+      <CollapsibleBox title="Antibacterial Assay" open={openAntibacterial} setOpen={setOpenAntibacterial}>
         <div className="space-y-4">
           {antibacterialRuns.map((run, index) => (
             <div key={run.id} className="border rounded-xl p-4 bg-gray-50 space-y-4">
@@ -301,25 +333,20 @@ export default function Step3C_Misc() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* ISO SELECTOR */}
-                <IsoSelector
-                  linkedIsolatedId={run.linkedIsolatedId}
+                <IsoMorSelector
+                  linkedIsoMorId={run.linkedIsoMorId}
                   testId={run.testId}
-                  onChange={(v) => updateAntibacterialRun(run.id, "linkedIsolatedId", v)}
+                  onChange={(v) => updateAntibacterialRun(run.id, "linkedIsoMorId", v)}
                 />
-
                 <Select label="Pathogen" value={run.pathogen || ""}
                   onChange={(e) => updateAntibacterialRun(run.id, "pathogen", e.target.value)}
                   options={["", ...PATHOGENS]} />
                 <Select label="Method" value={run.method || ""}
                   onChange={(e) => updateAntibacterialRun(run.id, "method", e.target.value)}
-                  options={["", ...METHODS]} />
+                  options={["", ...ANTIBACTERIAL_METHODS]} />
                 <Select label="Antibacterial Activity" value={run.activityLevel || ""}
                   onChange={(e) => updateAntibacterialRun(run.id, "activityLevel", e.target.value)}
                   options={["", ...ACTIVITY_LEVELS]} />
-                <Select label="Antimalarial Assay" value={run.antimalarialAssay || ""}
-                  onChange={(e) => updateAntibacterialRun(run.id, "antimalarialAssay", e.target.value)}
-                  options={["", ...ANTIMALARIAL_OPTIONS]} />
               </div>
 
               {run.activityLevel && (
@@ -344,6 +371,60 @@ export default function Step3C_Misc() {
         </div>
       </CollapsibleBox>
 
+      {/* ================= ANTIMALARIAL ASSAY ================= */}
+      <CollapsibleBox title="Antimalarial Assay" open={openAntimalarial} setOpen={setOpenAntimalarial}>
+        <div className="space-y-4">
+          {antimalarialRuns.map((run, index) => (
+            <div key={run.id} className="border rounded-xl p-4 bg-gray-50 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-gray-700">Run #{index + 1}</h3>
+                  {run.testId && (
+                    <p className="text-xs font-mono text-purple-600 mt-0.5">{run.testId}</p>
+                  )}
+                </div>
+                {antimalarialRuns.length > 1 && (
+                  <button type="button" onClick={() => removeAntimalarialRun(run.id)}
+                    className="flex items-center gap-1 text-red-500 text-sm hover:text-red-700 transition">
+                    <Trash2 size={14} /> Remove
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <IsoMorSelector
+                  linkedIsoMorId={run.linkedIsoMorId}
+                  testId={run.testId}
+                  onChange={(v) => updateAntimalarialRun(run.id, "linkedIsoMorId", v)}
+                />
+                <Select label="Plasmodium Species" value={run.plasmodiumSpecies || ""}
+                  onChange={(e) => updateAntimalarialRun(run.id, "plasmodiumSpecies", e.target.value)}
+                  options={["", ...PLASMODIUM_SPECIES]} />
+                <Select label="Method" value={run.method || ""}
+                  onChange={(e) => updateAntimalarialRun(run.id, "method", e.target.value)}
+                  options={["", ...ANTIMALARIAL_METHODS]} />
+                <Select label="Activity Level" value={run.activityLevel || ""}
+                  onChange={(e) => updateAntimalarialRun(run.id, "activityLevel", e.target.value)}
+                  options={["", ...ACTIVITY_LEVELS]} />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Run Notes</label>
+                <textarea value={run.notes || ""}
+                  onChange={(e) => updateAntimalarialRun(run.id, "notes", e.target.value)}
+                  rows={2} placeholder="Notes for this run..."
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white" />
+              </div>
+            </div>
+          ))}
+
+          <button type="button" onClick={addAntimalarialRun}
+            className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+            <Plus size={14} /> Add Another Run
+          </button>
+        </div>
+      </CollapsibleBox>
+
       {/* ================= BIOCHEMICAL TESTS ================= */}
       <CollapsibleBox title="Biochemical Tests" open={openBio} setOpen={setOpenBio}>
         <div className="space-y-4">
@@ -354,8 +435,8 @@ export default function Step3C_Misc() {
               index={index}
               defaultTests={DEFAULT_BIOCHEMICAL}
               canRemove={biochemicalRuns.length > 1}
-              isolatedOptions={isolatedOptions}
-              onIsoChange={(v) => updateRun("biochemicalRuns", run.id, "linkedIsolatedId", v)}
+              isoMorOptions={isoMorOptions}
+              onIsoMorChange={(v) => updateRun("biochemicalRuns", run.id, "linkedIsoMorId", v)}
               onRemove={() => removeRun("biochemicalRuns", run.id)}
               onNotesChange={(v) => updateRun("biochemicalRuns", run.id, "notes", v)}
               onToggle={(name) => toggleCheck("biochemicalRuns", run.id, name)}
@@ -365,7 +446,7 @@ export default function Step3C_Misc() {
               onToggleCustom={(testId, name) => toggleCustomCheck("biochemicalRuns", run.id, testId, name)}
             />
           ))}
-          <button type="button" onClick={() => addRun("biochemicalRuns", biochemicalRuns)}
+          <button type="button" onClick={() => addRun("biochemicalRuns")}
             className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
             <Plus size={14} /> Add Another Run
           </button>
@@ -382,8 +463,8 @@ export default function Step3C_Misc() {
               index={index}
               defaultTests={DEFAULT_ENZYMATIC}
               canRemove={enzymaticRuns.length > 1}
-              isolatedOptions={isolatedOptions}
-              onIsoChange={(v) => updateRun("enzymaticRuns", run.id, "linkedIsolatedId", v)}
+              isoMorOptions={isoMorOptions}
+              onIsoMorChange={(v) => updateRun("enzymaticRuns", run.id, "linkedIsoMorId", v)}
               onRemove={() => removeRun("enzymaticRuns", run.id)}
               onNotesChange={(v) => updateRun("enzymaticRuns", run.id, "notes", v)}
               onToggle={(name) => toggleCheck("enzymaticRuns", run.id, name)}
@@ -393,7 +474,7 @@ export default function Step3C_Misc() {
               onToggleCustom={(testId, name) => toggleCustomCheck("enzymaticRuns", run.id, testId, name)}
             />
           ))}
-          <button type="button" onClick={() => addRun("enzymaticRuns", enzymaticRuns)}
+          <button type="button" onClick={() => addRun("enzymaticRuns")}
             className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
             <Plus size={14} /> Add Another Run
           </button>
@@ -472,8 +553,8 @@ export default function Step3C_Misc() {
 
 /* ================= RUN BLOCK ================= */
 function RunBlock({
-  run, index, defaultTests, canRemove, isolatedOptions,
-  onIsoChange, onRemove, onNotesChange, onToggle,
+  run, index, defaultTests, canRemove, isoMorOptions,
+  onIsoMorChange, onRemove, onNotesChange, onToggle,
   onAddCustom, onUpdateCustom, onRemoveCustom, onToggleCustom
 }) {
   return (
@@ -493,23 +574,22 @@ function RunBlock({
         )}
       </div>
 
-      {/* ISO SELECTOR */}
       <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
         <div className="flex items-center gap-2 mb-2">
           <Link size={14} className="text-purple-600" />
           <p className="text-xs font-semibold text-purple-600 uppercase tracking-wider">
-            Link to Primary Isolated Entry
+            Link to Isolated Morphology Entry
           </p>
         </div>
-        {isolatedOptions.length === 0 ? (
+        {isoMorOptions.length === 0 ? (
           <p className="text-xs text-yellow-600 bg-yellow-50 rounded px-3 py-2">
-            No primary isolated entries found — go to Step 3A first.
+            No isolated morphology entries found — go to Step 3B first.
           </p>
         ) : (
-          <select value={run.linkedIsolatedId || ""} onChange={(e) => onIsoChange(e.target.value)}
+          <select value={run.linkedIsoMorId || ""} onChange={(e) => onIsoMorChange(e.target.value)}
             className="w-full border border-purple-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-purple-400 focus:outline-none">
-            <option value="">— Select Primary Isolated ID —</option>
-            {isolatedOptions.map((opt) => (
+            <option value="">— Select Isolated Morphology ID —</option>
+            {isoMorOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>

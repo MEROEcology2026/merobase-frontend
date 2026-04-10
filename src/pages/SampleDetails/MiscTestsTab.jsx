@@ -2,6 +2,7 @@ export default function MiscTestsTab({ misc }) {
   if (!misc) return null;
 
   const antibacterialRuns = misc?.antibacterialRuns || [];
+  const antimalarialRuns = misc?.antimalarialRuns || [];
   const biochemicalRuns = misc?.biochemicalRuns || [];
   const enzymaticRuns = misc?.enzymaticRuns || [];
 
@@ -16,45 +17,42 @@ export default function MiscTestsTab({ misc }) {
           <div className="space-y-3">
             {antibacterialRuns.map((run, index) => (
               <div key={run.id || index} className="bg-white border border-gray-100 rounded-xl p-5">
-
                 <div className="flex items-center gap-3 mb-4">
                   <span className="text-sm font-medium text-gray-600">Run #{index + 1}</span>
                 </div>
-
-                {/* Test ID badge */}
-                {run.testId && (
-                  <div className="bg-purple-50 border border-purple-100 rounded-lg px-4 py-3 mb-4">
-                    <div className="flex flex-wrap items-start gap-6">
-                      {run.linkedIsolatedId && (
-                        <div>
-                          <p className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-1">
-                            Linked ISO
-                          </p>
-                          <p className="font-mono text-xs text-purple-600">
-                            {run.linkedIsolatedId}
-                          </p>
-                        </div>
-                      )}
-                      <div>
-                        <p className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-1">
-                          Test ID
-                        </p>
-                        <p className="font-mono font-semibold text-purple-700 text-sm">
-                          {run.testId}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
+                <TestIdBadge run={run} />
                 <div className="space-y-3">
                   <Row label="Pathogen" value={run.pathogen} />
                   <Row label="Method" value={run.method} />
                   <Row label="Activity level" value={run.activityLevel} />
                   <Row label="Activity notes" value={run.activityNotes} />
-                  <Row label="Antimalarial assay" value={run.antimalarialAssay} />
                 </div>
+                {run.notes && (
+                  <p className="text-xs text-gray-400 mt-4 italic border-t pt-3">{run.notes}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
 
+      {/* ================= ANTIMALARIAL RUNS ================= */}
+      <Section title="Antimalarial Assay">
+        {antimalarialRuns.length === 0 ? (
+          <Empty />
+        ) : (
+          <div className="space-y-3">
+            {antimalarialRuns.map((run, index) => (
+              <div key={run.id || index} className="bg-white border border-gray-100 rounded-xl p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="text-sm font-medium text-gray-600">Run #{index + 1}</span>
+                </div>
+                <TestIdBadge run={run} />
+                <div className="space-y-3">
+                  <Row label="Plasmodium species" value={run.plasmodiumSpecies} />
+                  <Row label="Method" value={run.method} />
+                  <Row label="Activity level" value={run.activityLevel} />
+                </div>
                 {run.notes && (
                   <p className="text-xs text-gray-400 mt-4 italic border-t pt-3">{run.notes}</p>
                 )}
@@ -119,6 +117,31 @@ export default function MiscTestsTab({ misc }) {
   );
 }
 
+/* ================= TEST ID BADGE ================= */
+function TestIdBadge({ run }) {
+  if (!run.testId) return null;
+  return (
+    <div className="bg-purple-50 border border-purple-100 rounded-lg px-4 py-3 mb-4">
+      <div className="flex flex-wrap items-start gap-6">
+        {run.linkedIsoMorId && (
+          <div>
+            <p className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-1">
+              Linked ISOMOR
+            </p>
+            <p className="font-mono text-xs text-purple-600">{run.linkedIsoMorId}</p>
+          </div>
+        )}
+        <div>
+          <p className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-1">
+            Test ID
+          </p>
+          <p className="font-mono font-semibold text-purple-700 text-sm">{run.testId}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ================= RUN DISPLAY ================= */
 function RunDisplay({ run, index, color }) {
   const checkedDefaults = run.checked || [];
@@ -142,33 +165,8 @@ function RunDisplay({ run, index, color }) {
         <span className="text-sm font-medium text-gray-600">Run #{index + 1}</span>
       </div>
 
-      {/* Test ID badge */}
-      {run.testId && (
-        <div className="bg-purple-50 border border-purple-100 rounded-lg px-4 py-3 mb-4">
-          <div className="flex flex-wrap items-start gap-6">
-            {run.linkedIsolatedId && (
-              <div>
-                <p className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-1">
-                  Linked ISO
-                </p>
-                <p className="font-mono text-xs text-purple-600">
-                  {run.linkedIsolatedId}
-                </p>
-              </div>
-            )}
-            <div>
-              <p className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-1">
-                Test ID
-              </p>
-              <p className="font-mono font-semibold text-purple-700 text-sm">
-                {run.testId}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      <TestIdBadge run={run} />
 
-      {/* Test tags */}
       {allTests.length === 0 ? (
         <p className="text-sm text-gray-400 italic">No tests checked.</p>
       ) : (

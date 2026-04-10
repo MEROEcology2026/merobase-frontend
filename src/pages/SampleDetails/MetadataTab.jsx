@@ -1,4 +1,4 @@
-import { InfoGrid, Info, ImageGrid } from "./SharedComponents";
+import { ImageGrid } from "./SharedComponents";
 
 export default function MetadataTab({ metadata }) {
   if (!metadata) return null;
@@ -17,6 +17,8 @@ export default function MetadataTab({ metadata }) {
           <div className="space-y-3">
             <Row label="Sample name" value={metadata.sampleName} />
             <Row label="Sample type" value={metadata.sampleType} />
+            {/* ✅ ADDED: Part of Sample */}
+            <Row label="Part of sample" value={metadata.partOfSample} />
             <Row label="Dive site" value={metadata.diveSite} />
             <Row label="Collection date" value={metadata.collectionDate} />
             <Row label="Collector" value={metadata.collectorName} />

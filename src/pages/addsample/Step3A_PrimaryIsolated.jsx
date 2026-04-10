@@ -1,19 +1,25 @@
 import { useState } from "react";
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import { useSampleForm } from "../../context/SampleFormContext";
-import { generateIsolatedId, getNextIsoIndex } from "../../utils/sampleIdGenerator";
+import {
+  generateIsolatedId,
+  getNextIsoIndex,
+  AGAR_MEDIA_OPTIONS,
+  DILUTION_OPTIONS
+} from "../../utils/sampleIdGenerator";
 
 const ISOLATED_TYPES = ["Fungi", "Bacteria"];
 
 /* ================= EMPTY RUN FACTORY ================= */
-const createIsolatedRun = (sampleId, isolatedType, isoIndex) => ({
+const createIsolatedRun = (sampleId, isolatedType, agarMedia, dilution, isoIndex) => ({
   id: crypto.randomUUID(),
-  isolatedId: generateIsolatedId(sampleId, isolatedType, isoIndex),
+  isolatedId: generateIsolatedId(sampleId, isolatedType, agarMedia, dilution, isoIndex),
   isolatedType: isolatedType || "",
+  agarMedia: agarMedia || "",
+  dilution: dilution || "",
   shelf: "",
   positionInBox: "",
   storageTemperature: "-20°C",
-  agarMedia: "",
   solvent: "Aquades",
   incubationTemperature: "",
   incubationTime: "",
@@ -45,8 +51,7 @@ export default function Step3A_PrimaryIsolated() {
   /* ================= ADD RUN ================= */
   const addRun = () => {
     const nextIndex = getNextIsoIndex(runs);
-    const defaultType = "Fungi";
-    const newRun = createIsolatedRun(computedSampleId, defaultType, nextIndex);
+    const newRun = createIsolatedRun(computedSampleId, "Fungi", "", "", nextIndex);
     const updated = [...runs, newRun];
     updateRuns(updated);
     setOpenRuns((prev) => ({ ...prev, [newRun.id]: true }));
@@ -58,17 +63,24 @@ export default function Step3A_PrimaryIsolated() {
     updateRuns(runs.filter((r) => r.id !== id));
   };
 
+  /* ================= REGENERATE ISO ID ================= */
+  const regenIsoId = (run, index, overrides = {}) => {
+    const type = overrides.isolatedType ?? run.isolatedType;
+    const agar = overrides.agarMedia ?? run.agarMedia;
+    const dil = overrides.dilution ?? run.dilution;
+    return generateIsolatedId(computedSampleId, type, agar, dil, index + 1);
+  };
+
   /* ================= UPDATE FIELD ================= */
   const updateField = (id, field, value) => {
     updateRuns(
-      runs.map((r) => {
+      runs.map((r, index) => {
         if (r.id !== id) return r;
         const updated = { ...r, [field]: value };
 
-        /* ================= REGENERATE ISO ID if type changes ================= */
-        if (field === "isolatedType") {
-          const index = runs.findIndex((x) => x.id === id) + 1;
-          updated.isolatedId = generateIsolatedId(computedSampleId, value, index);
+        /* Regenerate ISO ID when type, agarMedia or dilution changes */
+        if (["isolatedType", "agarMedia", "dilution"].includes(field)) {
+          updated.isolatedId = regenIsoId(r, index, { [field]: value });
         }
 
         return updated;
@@ -91,7 +103,7 @@ export default function Step3A_PrimaryIsolated() {
       ) : (
         <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3">
           <p className="text-yellow-700 text-sm">
-            Sample ID not generated yet — go back to Step 1 and fill in Sample Type, Project Type, Project Number and Sample Number.
+            Sample ID not generated yet — go back to Step 1 and fill in all required fields.
           </p>
         </div>
       )}
@@ -122,6 +134,8 @@ export default function Step3A_PrimaryIsolated() {
                   <div>
                     <p className="text-sm font-semibold text-gray-700">
                       Entry #{index + 1} — {run.isolatedType || "Type not set"}
+                      {run.agarMedia ? ` · ${run.agarMedia}` : ""}
+                      {run.dilution ? ` · ${run.dilution}` : ""}
                     </p>
                     {run.isolatedId && (
                       <p className="text-xs font-mono text-blue-600 mt-0.5">
@@ -144,12 +158,16 @@ export default function Step3A_PrimaryIsolated() {
                 <div className="p-6 space-y-6">
 
                   {/* ================= AUTO ID DISPLAY ================= */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
-                    <p className="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-1">
+                  <div className={`border rounded-lg px-4 py-3 ${
+                    run.isolatedId
+                      ? "bg-blue-50 border-blue-200"
+                      : "bg-yellow-50 border-yellow-200"
+                  }`}>
+                    <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-blue-500">
                       Auto-generated Isolated ID
                     </p>
                     <p className="text-lg font-bold font-mono text-blue-700">
-                      {run.isolatedId || "Select isolated type to generate ID"}
+                      {run.isolatedId || "Select isolated type, agar media and dilution to generate ID"}
                     </p>
                   </div>
 
@@ -162,21 +180,64 @@ export default function Step3A_PrimaryIsolated() {
                       </label>
                       <div className="flex gap-3">
                         {ISOLATED_TYPES.map((type) => (
-                          <button
-                            key={type}
-                            type="button"
+                          <button key={type} type="button"
                             onClick={() => updateField(run.id, "isolatedType", type)}
                             className={`flex-1 py-2.5 rounded-lg border text-sm font-medium transition ${
                               run.isolatedType === type
                                 ? "bg-blue-600 text-white border-blue-600"
                                 : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
-                            }`}
-                          >
+                            }`}>
                             {type === "Fungi" ? "🍄 Fungi (FNG)" : "🦠 Bacteria (BCT)"}
                           </button>
                         ))}
                       </div>
                     </div>
+
+                    {/* ================= AGAR MEDIA DROPDOWN ================= */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">
+                        Agar Media <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={run.agarMedia || ""}
+                        onChange={(e) => updateField(run.id, "agarMedia", e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 p-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      >
+                        <option value="">— Select Agar Media —</option>
+                        {AGAR_MEDIA_OPTIONS.map((opt) => (
+                          <option key={opt.code} value={opt.code}>
+                            {opt.label} ({opt.code})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* ================= DILUTION DROPDOWN ================= */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">
+                        Dilution <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={run.dilution || ""}
+                        onChange={(e) => updateField(run.id, "dilution", e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 p-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      >
+                        <option value="">— Select Dilution —</option>
+                        {DILUTION_OPTIONS.map((opt) => (
+                          <option key={opt.code} value={opt.code}>
+                            {opt.label} ({opt.code})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <SelectField label="Storage Temperature" value={run.storageTemperature}
+                      onChange={(e) => updateField(run.id, "storageTemperature", e.target.value)}
+                      options={["", "-20°C", "-80°C"]} />
+
+                    <SelectField label="Solvent" value={run.solvent}
+                      onChange={(e) => updateField(run.id, "solvent", e.target.value)}
+                      options={["", "Aquades", "Seawater 70% : Aquades 30%"]} />
 
                     <Field label="Shelf" value={run.shelf}
                       onChange={(e) => updateField(run.id, "shelf", e.target.value)}
@@ -185,18 +246,6 @@ export default function Step3A_PrimaryIsolated() {
                     <Field label="Position in Box" value={run.positionInBox}
                       onChange={(e) => updateField(run.id, "positionInBox", e.target.value)}
                       placeholder="e.g. A3" />
-
-                    <SelectField label="Storage Temperature" value={run.storageTemperature}
-                      onChange={(e) => updateField(run.id, "storageTemperature", e.target.value)}
-                      options={["", "-20°C", "-80°C"]} />
-
-                    <Field label="Agar Media" value={run.agarMedia}
-                      onChange={(e) => updateField(run.id, "agarMedia", e.target.value)}
-                      placeholder="e.g. Marine Agar" />
-
-                    <SelectField label="Solvent" value={run.solvent}
-                      onChange={(e) => updateField(run.id, "solvent", e.target.value)}
-                      options={["", "Aquades", "Seawater 70% : Aquades 30%"]} />
 
                     <Field label="Incubation Temperature" value={run.incubationTemperature}
                       onChange={(e) => updateField(run.id, "incubationTemperature", e.target.value)}
@@ -213,13 +262,10 @@ export default function Step3A_PrimaryIsolated() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-600 mb-1">Notes</label>
-                    <textarea
-                      value={run.notes || ""}
+                    <textarea value={run.notes || ""}
                       onChange={(e) => updateField(run.id, "notes", e.target.value)}
-                      rows={3}
-                      placeholder="Additional storage or isolation notes"
-                      className="w-full rounded-lg border border-gray-300 p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    />
+                      rows={3} placeholder="Additional storage or isolation notes"
+                      className="w-full rounded-lg border border-gray-300 p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
                   </div>
                 </div>
               )}

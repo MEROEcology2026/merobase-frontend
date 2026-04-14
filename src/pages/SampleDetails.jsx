@@ -14,6 +14,7 @@ import IsolatedMorphologyTab from "./SampleDetails/IsolatedMorphologyTab";
 import MiscTestsTab from "./SampleDetails/MiscTestsTab";
 import MolecularTab from "./SampleDetails/MolecularTab";
 import PublicationTab from "./SampleDetails/PublicationTab";
+import IDTraceTab from "./SampleDetails/IDTraceTab";
 
 const TABS = [
   { id: "metadata",     label: "Metadata" },
@@ -21,6 +22,7 @@ const TABS = [
   { id: "morphology",   label: "Morphology" },
   { id: "molecular",    label: "Molecular" },
   { id: "publication",  label: "Publication" },
+  { id: "idtrace",      label: "ID Trace" },
 ];
 
 const MICRO_SUBTABS = [
@@ -286,7 +288,6 @@ export default function SampleDetails() {
           {/* ================= MICROBIOLOGY TAB ================= */}
           {activeTab === "microbiology" && (
             <div>
-              {/* Sub tabs */}
               <div className="flex gap-0 border-b mb-6">
                 {MICRO_SUBTABS.map((sub) => (
                   <button key={sub.id} onClick={() => setActiveMicroTab(sub.id)}
@@ -300,7 +301,6 @@ export default function SampleDetails() {
                 ))}
               </div>
 
-              {/* Sub tab content */}
               {activeMicroTab === "isolated" && (
                 <PrimaryIsolatedTab primary={isolatedRuns} />
               )}
@@ -325,6 +325,11 @@ export default function SampleDetails() {
 
           {activeTab === "publication" && (
             <PublicationTab publication={sample.publication} />
+          )}
+
+          {/* ================= ID TRACE TAB ================= */}
+          {activeTab === "idtrace" && (
+            <IDTraceTab sample={sample} />
           )}
 
         </div>

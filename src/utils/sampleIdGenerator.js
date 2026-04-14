@@ -35,78 +35,104 @@ export const DILUTION_OPTIONS = [
 
 /* ================= SAMPLE ID ================= */
 // Format: B.A.H.01.005
-// Biology → B, Non-Biology → NB
-// Project Type → A or B
-// Part of Sample → code (H, WB, FP, etc.)
-// Project Number → zero padded to 2 digits
-// Sample Number → zero padded to 3 digits
-
 export const generateSampleId = (sampleType, projectType, partOfSample, projectNumber, sampleNumber) => {
   if (!sampleType || !projectType || !partOfSample || !projectNumber || !sampleNumber) return "";
-
-  const type = sampleType === "Biological" ? "B" : "NB";
+  const type    = sampleType === "Biological" ? "B" : "NB";
   const project = String(projectType).toUpperCase();
-  const part = String(partOfSample).toUpperCase();
+  const part    = String(partOfSample).toUpperCase();
   const projNum = String(projectNumber).padStart(2, "0");
   const sampleNum = String(sampleNumber).padStart(3, "0");
-
   return `${type}.${project}.${part}.${projNum}.${sampleNum}`;
+};
+
+/* ================= MORPHOLOGY ID ================= */
+// Format: B.A.H.01.005.MOR — independent
+export const generateMorphologyId = (sampleId) => {
+  if (!sampleId) return "";
+  return `${sampleId}.MOR`;
+};
+
+/* ================= MOLECULAR ID ================= */
+// Format: B.A.H.01.005.MOL — independent
+export const generateMolecularId = (sampleId) => {
+  if (!sampleId) return "";
+  return `${sampleId}.MOL`;
 };
 
 /* ================= ISOLATED ID ================= */
 // Format: B.A.H.01.005.FNG.NA.10-2.ISO-01
-// Fungi → FNG, Bacteria → BCT
-// agarMedia → code from AGAR_MEDIA_OPTIONS
-// dilution → code from DILUTION_OPTIONS
-// isoIndex = global 1-based index per sample
-
 export const generateIsolatedId = (sampleId, isolatedType, agarMedia, dilution, isoIndex) => {
   if (!sampleId || !isolatedType || !agarMedia || !dilution || !isoIndex) return "";
-
   const typeCode = isolatedType === "Fungi" ? "FNG" : "BCT";
-  const isoNum = String(isoIndex).padStart(2, "0");
-
+  const isoNum   = String(isoIndex).padStart(2, "0");
   return `${sampleId}.${typeCode}.${agarMedia}.${dilution}.ISO-${isoNum}`;
 };
 
 /* ================= ISOLATED MORPHOLOGY ID ================= */
-// Format: B.A.H.01.005.FNG.NA.10-2.ISO-01.ISOMOR-01
-// isoMorIndex = global 1-based index per sample
-
-export const generateIsoMorId = (isolatedId, isoMorIndex) => {
-  if (!isolatedId || !isoMorIndex) return "";
-
-  const isoMorNum = String(isoMorIndex).padStart(2, "0");
-
-  return `${isolatedId}.ISOMOR-${isoMorNum}`;
+// Format: B.A.H.01.005.FNG.NA.10-2.ISO-01.ISOMOR
+// ✅ NO number — 1 ISO = 1 ISOMOR, always flat
+export const generateIsoMorId = (isolatedId) => {
+  if (!isolatedId) return "";
+  return `${isolatedId}.ISOMOR`;
 };
 
-/* ================= TEST ID ================= */
-// Format: B.A.H.01.005.FNG.NA.10-2.ISO-01.ISOMOR-01.TEST-01
-// testIndex = global 1-based index per sample
-// now links from ISOMOR ID, not ISO ID
+/* ================= TEST IDs ================= */
+// Tests can link to either ISO or ISOMOR — counter resets per linked ID
+// Format: [linkedId].ABSY-01
+export const generateAntibacterialId = (linkedId, index) => {
+  if (!linkedId || !index) return "";
+  return `${linkedId}.ABSY-${String(index).padStart(2, "0")}`;
+};
 
-export const generateTestId = (isoMorId, testIndex) => {
-  if (!isoMorId || !testIndex) return "";
+// Format: [linkedId].AASY-01
+export const generateAntimalarialId = (linkedId, index) => {
+  if (!linkedId || !index) return "";
+  return `${linkedId}.AASY-${String(index).padStart(2, "0")}`;
+};
 
-  const testNum = String(testIndex).padStart(2, "0");
+// Format: [linkedId].BT-01
+export const generateBiochemicalId = (linkedId, index) => {
+  if (!linkedId || !index) return "";
+  return `${linkedId}.BT-${String(index).padStart(2, "0")}`;
+};
 
-  return `${isoMorId}.TEST-${testNum}`;
+// Format: [linkedId].EBT-01
+export const generateEnzymaticId = (linkedId, index) => {
+  if (!linkedId || !index) return "";
+  return `${linkedId}.EBT-${String(index).padStart(2, "0")}`;
 };
 
 /* ================= HELPERS ================= */
 
-// Get next ISO index — global counter per sample
+// Global ISO counter per sample
 export const getNextIsoIndex = (primaryIsolatedRuns = []) => {
   return primaryIsolatedRuns.length + 1;
 };
 
-// Get next ISOMOR index — global counter per sample
-export const getNextIsoMorIndex = (isolatedMorphologyRuns = []) => {
-  return isolatedMorphologyRuns.length + 1;
+// Per-linked-ID counters — count only runs with same linked ID
+export const getNextAntibacterialIndex = (runs = [], linkedId) => {
+  return runs.filter(r => r.linkedId === linkedId).length + 1;
 };
 
-// Get next TEST index — global counter per sample
-export const getNextTestIndex = (allTestRuns = []) => {
-  return allTestRuns.length + 1;
+export const getNextAntimalarialIndex = (runs = [], linkedId) => {
+  return runs.filter(r => r.linkedId === linkedId).length + 1;
+};
+
+export const getNextBiochemicalIndex = (runs = [], linkedId) => {
+  return runs.filter(r => r.linkedId === linkedId).length + 1;
+};
+
+export const getNextEnzymaticIndex = (runs = [], linkedId) => {
+  return runs.filter(r => r.linkedId === linkedId).length + 1;
+};
+
+/* ================= REGEN HELPER ================= */
+// Walks runs in order, counts per linkedId group
+export const regenIds = (runs, generator) => {
+  const counters = {};
+  return runs.map((r) => {
+    if (!r.linkedId) return { ...r, testId: "" };
+    counters[r.linkedId] = (counters[r.linkedId] || 0) + 1;
+    return { ...r, testId: generator(r.linkedId, counters[r.linkedId]) };
+  });
 };

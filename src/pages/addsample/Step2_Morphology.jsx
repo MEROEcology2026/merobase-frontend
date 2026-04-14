@@ -2,10 +2,14 @@ import { useState } from "react";
 import FormProgressBar from "../../components/FormProgressBar";
 import { useSampleForm } from "../../context/SampleFormContext";
 import { resizeImage } from "../../utils/imageUtils";
+import { generateMorphologyId } from "../../utils/sampleIdGenerator";
 
 export default function Step2_Morphology() {
-  const { formData, updateSection } = useSampleForm();
+  const { formData, updateSection, computedSampleId } = useSampleForm();
   const morphology = formData.morphology || {};
+
+  /* ================= MORPHOLOGY ID ================= */
+  const morphologyId = generateMorphologyId(computedSampleId);
 
   const [open, setOpen] = useState({ sem: true, microscope: true, notes: true });
   const toggle = (key) => setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -47,6 +51,29 @@ export default function Step2_Morphology() {
         <p className="text-sm text-gray-500">Upload SEM & Microscope images and add notes</p>
       </header>
 
+      {/* ================= MORPHOLOGY ID PREVIEW ================= */}
+      <div className={`rounded-xl px-5 py-4 flex items-center justify-between ${
+        morphologyId
+          ? "bg-blue-50 border border-blue-200"
+          : "bg-gray-50 border border-gray-200"
+      }`}>
+        <div>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+            Morphology ID
+          </p>
+          <p className={`text-xl font-bold font-mono ${
+            morphologyId ? "text-blue-700" : "text-gray-400"
+          }`}>
+            {morphologyId || "Go back to Step 1 and complete the Sample ID first"}
+          </p>
+        </div>
+        {morphologyId && (
+          <div className="bg-blue-600 text-white text-xs px-3 py-1 rounded-full font-medium flex-shrink-0">
+            Independent
+          </div>
+        )}
+      </div>
+
       {/* ================= SEM PHOTOS ================= */}
       <Box title="SEM Photos" open={open.sem} toggle={() => toggle("sem")}>
         <FileUpload onFiles={(files) => handleMultipleImages("semPhotos", files)} />
@@ -59,7 +86,6 @@ export default function Step2_Morphology() {
       </Box>
 
       {/* ================= MICROSCOPE PHOTOS ================= */}
-      {/* ✅ FIXED: microscopePhotos → microPhotos */}
       <Box title="Microscope Photos" open={open.microscope} toggle={() => toggle("microscope")}>
         <FileUpload onFiles={(files) => handleMultipleImages("microPhotos", files)} />
         {morphology.microPhotos?.length > 0 && (
@@ -115,10 +141,10 @@ function ImageGrid({ images, onRemove }) {
         <div key={img.id} className="relative">
           <img src={img.data} alt={img.name}
             className="w-full h-32 object-cover rounded-lg shadow" />
-          <button
-            onClick={() => onRemove(img.id)}
-            className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center"
-          >×</button>
+          <button onClick={() => onRemove(img.id)}
+            className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">
+            ×
+          </button>
         </div>
       ))}
     </div>

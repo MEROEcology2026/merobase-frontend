@@ -3,6 +3,7 @@ import FormProgressBar from "../../components/FormProgressBar";
 import FileDropzone from "../../components/FileDropzone";
 import { useSampleForm } from "../../context/SampleFormContext";
 import { resizeImage } from "../../utils/imageUtils";
+import { generateMolecularId } from "../../utils/sampleIdGenerator";
 
 const MARKER_GENES = ["16S rRNA","18S rRNA","ITS","COI","rbcL","H3"];
 const DNA_SOURCES = ["Bacteria Culture","Paper Filter","Animal Tissue"];
@@ -34,9 +35,11 @@ const PRIMER_REVERSE_OPTIONS = [
 ];
 
 export default function Step4_Molecular() {
-  const { formData, updateSection } = useSampleForm();
+  const { formData, updateSection, computedSampleId } = useSampleForm();
 
-  /* ✅ FIXED: molecular now uses markers array from context */
+  /* ================= MOLECULAR ID ================= */
+  const molecularId = generateMolecularId(computedSampleId);
+
   const molecular = {
     ...formData.molecular,
     markers: formData.molecular?.markers?.length > 0
@@ -49,7 +52,6 @@ export default function Step4_Molecular() {
   const toggle = (key) => setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
   const setValue = (field, value) => updateSection("molecular", { [field]: value });
 
-  /* ✅ FIXED: removed normalizeImage, handle files directly */
   const handleGelImage = async (files) => {
     if (!files?.length) return;
     const data = await resizeImage(files[0]);
@@ -65,7 +67,6 @@ export default function Step4_Molecular() {
     setValue("rawSequenceFiles", fileList);
   };
 
-  /* ✅ FIXED: no direct mutation, use map instead */
   const updateMarker = (index, field, value) => {
     const updated = molecular.markers.map((m, i) =>
       i === index ? { ...m, [field]: value } : m
@@ -97,6 +98,29 @@ export default function Step4_Molecular() {
         <h1 className="text-2xl font-bold text-gray-800">Molecular Analysis</h1>
         <p className="text-sm text-gray-500">DNA extraction, amplification, sequencing, and analysis metadata</p>
       </header>
+
+      {/* ================= MOLECULAR ID PREVIEW ================= */}
+      <div className={`rounded-xl px-5 py-4 flex items-center justify-between ${
+        molecularId
+          ? "bg-blue-50 border border-blue-200"
+          : "bg-gray-50 border border-gray-200"
+      }`}>
+        <div>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+            Molecular ID
+          </p>
+          <p className={`text-xl font-bold font-mono ${
+            molecularId ? "text-blue-700" : "text-gray-400"
+          }`}>
+            {molecularId || "Go back to Step 1 and complete the Sample ID first"}
+          </p>
+        </div>
+        {molecularId && (
+          <div className="bg-blue-600 text-white text-xs px-3 py-1 rounded-full font-medium flex-shrink-0">
+            Independent
+          </div>
+        )}
+      </div>
 
       {/* ================= FILE UPLOADS ================= */}
       <Box title="Gel & RAW Sequence Files" open={open.files} toggle={() => toggle("files")}>
@@ -148,7 +172,6 @@ export default function Step4_Molecular() {
       {/* ================= MARKER-SPECIFIC ================= */}
       <Box title="Marker Specific Data" open={open.markers} toggle={() => toggle("markers")}>
         {molecular.markers.map((marker, index) => (
-          /* ✅ FIXED: use marker.id as key instead of index */
           <div key={marker.id || index} className="border rounded-lg p-4 mb-6 bg-gray-50">
             <h3 className="font-semibold mb-4">Marker #{index + 1}</h3>
             <Grid>

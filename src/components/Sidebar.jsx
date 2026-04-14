@@ -1,17 +1,20 @@
 // src/components/Sidebar.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { LayoutDashboard, PlusCircle, Edit3, Search, ChevronRight } from "lucide-react";
+import {
+  LayoutDashboard, PlusCircle, Edit3, Search, ChevronRight, BookOpen
+} from "lucide-react";
 
 export default function Sidebar({ activePage }) {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const navItems = [
-    { label: "Dashboard", icon: <LayoutDashboard className="text-blue-600" />, path: "/dashboard" },
-    { label: "Add Sample", icon: <PlusCircle className="text-green-600" />, path: "/add/step1" },
-    { label: "Edit Sample", icon: <Edit3 className="text-yellow-600" />, path: "/editsample" },
-    { label: "Search Sample", icon: <Search className="text-purple-600" />, path: "/searchsample" },
+    { label: "Dashboard",     icon: <LayoutDashboard className="text-blue-600" />,  path: "/dashboard" },
+    { label: "Add Sample",    icon: <PlusCircle className="text-green-600" />,       path: "/add/step1" },
+    { label: "Edit Sample",   icon: <Edit3 className="text-yellow-600" />,           path: "/editsample" },
+    { label: "Search Sample", icon: <Search className="text-purple-600" />,          path: "/searchsample" },
+    { label: "Manual",        icon: <BookOpen className="text-blue-500" />,          path: "/manual" },
   ];
 
   return (

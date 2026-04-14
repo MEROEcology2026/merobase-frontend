@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   LayoutDashboard, PlusCircle, Edit3, Search,
-  ChevronRight, LogOut, ArrowLeft, Trash2
+  ChevronRight, LogOut, ArrowLeft, Trash2, BookOpen
 } from "lucide-react";
 import { samplesAPI } from "../services/api";
 import { useSampleFormContext } from "../context/SampleFormContext";
@@ -180,6 +180,9 @@ export default function SampleDetails() {
             onClick={() => navigate("/editsample")} />
           <SidebarBtn icon={<Search />} label="Search" open={sidebarOpen}
             onClick={() => navigate("/searchsample")} />
+          {/* ✅ ADDED */}
+          <SidebarBtn icon={<BookOpen />} label="Manual" open={sidebarOpen}
+            onClick={() => navigate("/manual")} />
         </nav>
 
         <div className="p-2 border-t">
@@ -285,7 +288,6 @@ export default function SampleDetails() {
             <MetadataTab metadata={metadata} />
           )}
 
-          {/* ================= MICROBIOLOGY TAB ================= */}
           {activeTab === "microbiology" && (
             <div>
               <div className="flex gap-0 border-b mb-6">
@@ -327,7 +329,6 @@ export default function SampleDetails() {
             <PublicationTab publication={sample.publication} />
           )}
 
-          {/* ================= ID TRACE TAB ================= */}
           {activeTab === "idtrace" && (
             <IDTraceTab sample={sample} />
           )}

@@ -6,17 +6,18 @@ import {
   Edit3,
   Search,
   ChevronRight,
+  BookOpen,
 } from "lucide-react";
 import { useSampleFormContext } from "../../context/SampleFormContext";
 
 const steps = [
-  { path: "/add/step1", label: "Metadata" },
-  { path: "/add/step2", label: "Morphology" },
+  { path: "/add/step1",  label: "Metadata" },
+  { path: "/add/step2",  label: "Morphology" },
   { path: "/add/step3a", label: "Microbiology - Primary Isolated" },
   { path: "/add/step3b", label: "Microbiology - Isolated Morphology" },
   { path: "/add/step3c", label: "Microbiology - Misc Tests" },
-  { path: "/add/step4", label: "Molecular" },
-  { path: "/add/step5", label: "Publication" },
+  { path: "/add/step4",  label: "Molecular" },
+  { path: "/add/step5",  label: "Publication" },
   { path: "/add/review", label: "Review" },
 ];
 
@@ -30,7 +31,6 @@ export default function AddSampleWizard() {
     (step) => step.path === location.pathname
   );
 
-  /* ✅ FIXED: if mode is edit but user navigated here fresh, reset to add mode */
   useEffect(() => {
     const cameFromEdit = location.state?.fromEdit;
     if (mode === "edit" && !cameFromEdit) {
@@ -73,7 +73,7 @@ function WizardLayout({
   children,
 }) {
   const navigate = useNavigate();
-  const { mode } = useSampleFormContext();
+  const { mode, clearDraftOnly } = useSampleFormContext();
 
   return (
     <div className="flex min-h-screen bg-gray-50 font-sans">
@@ -121,6 +121,13 @@ function WizardLayout({
             label="Search Sample"
             open={sidebarOpen}
             onClick={() => navigate("/searchsample")}
+          />
+          {/* ✅ ADDED */}
+          <SidebarButton
+            icon={<BookOpen className="text-blue-500" />}
+            label="Manual"
+            open={sidebarOpen}
+            onClick={() => navigate("/manual")}
           />
         </nav>
       </aside>

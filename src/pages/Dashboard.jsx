@@ -6,7 +6,7 @@ import {
   CartesianGrid, ResponsiveContainer,
 } from "recharts";
 import {
-  LayoutDashboard, PlusCircle, Edit3, Search, ChevronLeft, LogOut,
+  LayoutDashboard, PlusCircle, Edit3, Search, ChevronLeft, LogOut, BookOpen,
 } from "lucide-react";
 import { samplesAPI } from "../services/api";
 import { useSampleFormContext } from "../context/SampleFormContext";
@@ -107,6 +107,9 @@ export default function Dashboard() {
             onClick={() => navigate("/editsample")} />
           <NavItem icon={<Search />} label="Search Sample" open={sidebarOpen}
             onClick={() => navigate("/searchsample")} />
+          {/* ✅ ADDED */}
+          <NavItem icon={<BookOpen />} label="Manual" open={sidebarOpen}
+            onClick={() => navigate("/manual")} />
         </nav>
 
         <div className="p-2 border-t">
@@ -212,8 +215,8 @@ function StatusPanel() {
 
   const tabs = [
     { id: "working", label: "What's Working" },
-    { id: "todo", label: "What's Next" },
-    { id: "bugs", label: "Known Issues" },
+    { id: "todo",    label: "What's Next" },
+    { id: "bugs",    label: "Known Issues" },
   ];
 
   const working = [
@@ -233,17 +236,16 @@ function StatusPanel() {
     { group: "Primary Isolated", items: [
       "Supports multiple isolated entries per sample",
       "Each entry has an Isolated Type — Fungi (FNG) or Bacteria (BCT)",
-      "Isolated ID is auto-generated per entry — e.g. B.A.01.005.FNG.ISO-01",
+      "Isolated ID is auto-generated per entry — e.g. B.A.H.01.005.FNG.NA.10-2.ISO-01",
       "Each entry has its own storage fields and notes",
     ]},
     { group: "Microbiology Tests", items: [
-      "Antibacterial assay supports multiple runs with all fields per run",
-      "Biochemical and enzymatic tests support multiple runs with custom tests and notes",
-      "Each test run can be linked to a Primary Isolated entry",
-      "Test ID is auto-generated when linked — e.g. B.A.01.005.FNG.ISO-01.TEST-01",
+      "Antibacterial, Antimalarial, Biochemical and Enzymatic tests all supported",
+      "Each test run can be linked to either an ISO or ISOMOR entry",
+      "Test ID is auto-generated per linked ID — e.g. ...ISOMOR.ABSY-01",
+      "Counters reset per linked ID group",
     ]},
     { group: "Adding Sample Details", items: [
-      "You can pick a collection location on the map or search by name",
       "You can upload SEM and microscope photos",
       "Molecular data supports multiple marker genes",
       "Publication links can be added",
@@ -257,17 +259,11 @@ function StatusPanel() {
 
   const todo = [
     { group: "Coming Soon", items: [
-      "Sample details page is missing some fields like dive site, depth, and temperature",
-      "Sequence files in molecular section show as broken images — needs a proper file list",
-      "Isolated morphology (Step 3B) not yet linked to a Primary Isolated ID",
-      "MetadataTab in sample details missing dive site, depth, substrate and temperature fields",
-    ]},
-    { group: "Future Features", items: [
       "Export your sample list to Excel or PDF",
       "See all collection locations on a single map",
       "Different user levels — admin can edit, viewer can only read",
       "Sample photos stored properly on the server instead of inside the database",
-      "Step 3B — Isolated Morphology linked to a specific Primary Isolated entry",
+      "Batch import — upload a CSV to register multiple samples at once",
     ]},
   ];
 
@@ -275,8 +271,6 @@ function StatusPanel() {
     { group: "Things to be aware of", items: [
       "Login session lasts 7 days — after that you will need to log in again",
       "Collection dates might show one day earlier than expected due to timezone differences",
-      "The file upload button in some steps might not work consistently",
-      "Step 3B still has its own internal copy of the image resize function — doesn't affect usage",
       "Always use the Add Sample button in the sidebar to start a new sample — avoids form state conflicts",
     ]},
   ];
@@ -285,8 +279,8 @@ function StatusPanel() {
 
   const tabStyles = {
     working: { active: "bg-green-100 text-green-700 border-transparent", dot: "bg-green-500" },
-    todo: { active: "bg-yellow-100 text-yellow-700 border-transparent", dot: "bg-yellow-500" },
-    bugs: { active: "bg-red-100 text-red-700 border-transparent", dot: "bg-red-500" },
+    todo:    { active: "bg-yellow-100 text-yellow-700 border-transparent", dot: "bg-yellow-500" },
+    bugs:    { active: "bg-red-100 text-red-700 border-transparent", dot: "bg-red-500" },
   };
 
   return (

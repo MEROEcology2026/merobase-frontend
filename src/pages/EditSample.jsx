@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, PlusCircle, Edit3,
-  Search as SearchIcon, ChevronRight, Calendar, LogOut, Trash2
+  Search as SearchIcon, ChevronRight, Calendar, LogOut, Trash2, BookOpen
 } from "lucide-react";
 import { DateRange } from "react-date-range";
 import { useSampleFormContext } from "../context/SampleFormContext";
@@ -85,10 +85,10 @@ export default function EditSample() {
         sample.dive_site, sample.kingdom, sample.project_type, sample.sample_id
       ].filter(Boolean).join(" ").toLowerCase();
 
-      const matchesQuery = searchable.includes(query.toLowerCase());
+      const matchesQuery   = searchable.includes(query.toLowerCase());
       const matchesKingdom = !kingdom || sample.kingdom === kingdom;
       const matchesProject = !projectType || sample.project_type === projectType;
-      const matchesType = !sampleType || sample.sample_type === sampleType;
+      const matchesType    = !sampleType || sample.sample_type === sampleType;
 
       let matchesDate = true;
       if (range[0].startDate && range[0].endDate && sample.collection_date) {
@@ -136,7 +136,6 @@ export default function EditSample() {
         publication: full.publication || { links: [] },
       });
 
-      /* ✅ FIXED: pass fromEdit state so wizard doesn't reset */
       navigate("/add/step1", { state: { fromEdit: true } });
     } catch (err) {
       console.error("Failed to load sample for edit:", err);
@@ -173,15 +172,22 @@ export default function EditSample() {
         </div>
 
         <nav className="flex flex-col mt-4 flex-1">
-          <SidebarButton icon={<LayoutDashboard className="text-blue-600" />} label="Dashboard" open={sidebarOpen} onClick={() => navigate("/dashboard")} />
-          <SidebarButton icon={<PlusCircle className="text-green-600" />} label="Add Sample" open={sidebarOpen}
-            onClick={() => { clearDraftOnly(); navigate("/add/step1"); }} />
-          <SidebarButton icon={<Edit3 className="text-yellow-600" />} label="Edit Sample" open={sidebarOpen} active />
-          <SidebarButton icon={<SearchIcon className="text-purple-600" />} label="Search Sample" open={sidebarOpen} onClick={() => navigate("/searchsample")} />
+          <SidebarButton icon={<LayoutDashboard className="text-blue-600" />} label="Dashboard"
+            open={sidebarOpen} onClick={() => navigate("/dashboard")} />
+          <SidebarButton icon={<PlusCircle className="text-green-600" />} label="Add Sample"
+            open={sidebarOpen} onClick={() => { clearDraftOnly(); navigate("/add/step1"); }} />
+          <SidebarButton icon={<Edit3 className="text-yellow-600" />} label="Edit Sample"
+            open={sidebarOpen} active />
+          <SidebarButton icon={<SearchIcon className="text-purple-600" />} label="Search Sample"
+            open={sidebarOpen} onClick={() => navigate("/searchsample")} />
+          {/* ✅ ADDED */}
+          <SidebarButton icon={<BookOpen className="text-blue-500" />} label="Manual"
+            open={sidebarOpen} onClick={() => navigate("/manual")} />
         </nav>
 
         <div className="p-2 border-t">
-          <SidebarButton icon={<LogOut className="text-red-500" />} label="Logout" open={sidebarOpen} onClick={handleLogout} />
+          <SidebarButton icon={<LogOut className="text-red-500" />} label="Logout"
+            open={sidebarOpen} onClick={handleLogout} />
         </div>
       </aside>
 
@@ -205,17 +211,20 @@ export default function EditSample() {
                 className="pl-10 w-full border rounded-lg px-3 py-2" />
             </div>
 
-            <select value={kingdom} onChange={e => setKingdom(e.target.value)} className="border rounded-lg px-3 py-2">
+            <select value={kingdom} onChange={e => setKingdom(e.target.value)}
+              className="border rounded-lg px-3 py-2">
               <option value="">All Kingdoms</option>
               {kingdoms.map(k => <option key={k} value={k}>{k}</option>)}
             </select>
 
-            <select value={projectType} onChange={e => setProjectType(e.target.value)} className="border rounded-lg px-3 py-2">
+            <select value={projectType} onChange={e => setProjectType(e.target.value)}
+              className="border rounded-lg px-3 py-2">
               <option value="">All Projects</option>
               {projectTypes.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
 
-            <select value={sampleType} onChange={e => setSampleType(e.target.value)} className="border rounded-lg px-3 py-2">
+            <select value={sampleType} onChange={e => setSampleType(e.target.value)}
+              className="border rounded-lg px-3 py-2">
               <option value="">All Sample Types</option>
               <option value="Biological">Biological</option>
               <option value="Non-Biological">Non-Biological</option>

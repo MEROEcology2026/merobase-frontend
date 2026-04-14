@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import SearchSample from "./pages/SearchSample";
 import EditSample from "./pages/EditSample";
 import SampleDetails from "./pages/SampleDetails";
+import ManualBook from "./pages/ManualBook";
 
 import AddSampleWizard from "./pages/addsample/AddSampleWizard";
 import Step1_Metadata from "./pages/addsample/Step1_Metadata";
@@ -47,6 +48,11 @@ export default function App() {
 
           <Route path="/sampledetails/:id" element={
             <ProtectedRoute><SampleDetails /></ProtectedRoute>
+          } />
+
+          {/* ✅ Manual Book */}
+          <Route path="/manual" element={
+            <ProtectedRoute><ManualBook /></ProtectedRoute>
           } />
 
           {/* Wizard */}

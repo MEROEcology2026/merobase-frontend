@@ -62,28 +62,14 @@ export default function Step3C_Misc() {
   const { formData, updateSection } = useSampleForm();
   const microTests = formData.microbiology?.microbiologyTests || {};
 
-  /* ================= BUILD LINK OPTIONS — ISO + ISOMOR ================= */
+  /* ================= ✅ ONLY ISO OPTIONS — no ISOMOR ================= */
   const isolatedRuns = formData.microbiology?.primaryIsolatedRuns || [];
-  const isoMorRuns   = formData.microbiology?.isolatedMorphologyRuns || [];
-
-  const linkOptions = [
-    // ISO entries
-    ...isolatedRuns
-      .filter(r => r.isolatedId)
-      .map(r => ({
-        value: r.isolatedId,
-        label: `${r.isolatedId}`,
-        group: "Primary Isolated"
-      })),
-    // ISOMOR entries
-    ...isoMorRuns
-      .filter(r => r.isoMorId)
-      .map(r => ({
-        value: r.isoMorId,
-        label: `${r.isoMorId}`,
-        group: "Isolated Morphology"
-      })),
-  ];
+  const linkOptions = isolatedRuns
+    .filter(r => r.isolatedId)
+    .map(r => ({
+      value: r.isolatedId,
+      label: `${r.isolatedId} (${r.isolatedType || "Unknown"})`,
+    }));
 
   /* ================= RUNS ================= */
   const antibacterialRuns = microTests.antibacterialRuns?.length > 0
@@ -112,9 +98,9 @@ export default function Step3C_Misc() {
 
   /* ================= ANTIBACTERIAL HANDLERS ================= */
   const addAntibacterialRun = () => {
-    const firstId  = linkOptions[0]?.value || "";
+    const firstId   = linkOptions[0]?.value || "";
     const nextIndex = getNextAntibacterialIndex(antibacterialRuns, firstId);
-    const testId   = firstId ? generateAntibacterialId(firstId, nextIndex) : "";
+    const testId    = firstId ? generateAntibacterialId(firstId, nextIndex) : "";
     updateMicroTests({
       antibacterialRuns: [...antibacterialRuns, createAntibacterialRun(firstId, testId)]
     });
@@ -134,9 +120,9 @@ export default function Step3C_Misc() {
 
   /* ================= ANTIMALARIAL HANDLERS ================= */
   const addAntimalarialRun = () => {
-    const firstId  = linkOptions[0]?.value || "";
+    const firstId   = linkOptions[0]?.value || "";
     const nextIndex = getNextAntimalarialIndex(antimalarialRuns, firstId);
-    const testId   = firstId ? generateAntimalarialId(firstId, nextIndex) : "";
+    const testId    = firstId ? generateAntimalarialId(firstId, nextIndex) : "";
     updateMicroTests({
       antimalarialRuns: [...antimalarialRuns, createAntimalarialRun(firstId, testId)]
     });
@@ -156,10 +142,10 @@ export default function Step3C_Misc() {
 
   /* ================= BIOCHEMICAL HANDLERS ================= */
   const addBiochemicalRun = () => {
-    const firstId  = linkOptions[0]?.value || "";
+    const firstId   = linkOptions[0]?.value || "";
     const nextIndex = getNextBiochemicalIndex(biochemicalRuns, firstId);
-    const testId   = firstId ? generateBiochemicalId(firstId, nextIndex) : "";
-    const current  = microTests.biochemicalRuns || [createTestRun()];
+    const testId    = firstId ? generateBiochemicalId(firstId, nextIndex) : "";
+    const current   = microTests.biochemicalRuns || [createTestRun()];
     updateMicroTests({ biochemicalRuns: [...current, createTestRun(firstId, testId)] });
   };
 
@@ -179,10 +165,10 @@ export default function Step3C_Misc() {
 
   /* ================= ENZYMATIC HANDLERS ================= */
   const addEnzymaticRun = () => {
-    const firstId  = linkOptions[0]?.value || "";
+    const firstId   = linkOptions[0]?.value || "";
     const nextIndex = getNextEnzymaticIndex(enzymaticRuns, firstId);
-    const testId   = firstId ? generateEnzymaticId(firstId, nextIndex) : "";
-    const current  = microTests.enzymaticRuns || [createTestRun()];
+    const testId    = firstId ? generateEnzymaticId(firstId, nextIndex) : "";
+    const current   = microTests.enzymaticRuns || [createTestRun()];
     updateMicroTests({ enzymaticRuns: [...current, createTestRun(firstId, testId)] });
   };
 
@@ -260,47 +246,34 @@ export default function Step3C_Misc() {
     });
   };
 
-  /* ================= LINK SELECTOR COMPONENT ================= */
+  /* ================= ✅ SIMPLIFIED LINK SELECTOR — ISO ONLY ================= */
   const LinkSelector = ({ linkedId, testId, onChange }) => (
-    <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 md:col-span-2">
+    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 md:col-span-2">
       <div className="flex items-center gap-2 mb-2">
-        <Link size={14} className="text-purple-600" />
-        <p className="text-xs font-semibold text-purple-600 uppercase tracking-wider">
-          Link to ISO or Isolated Morphology
+        <Link size={14} className="text-blue-600" />
+        <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">
+          Link to Primary Isolated
         </p>
       </div>
       {linkOptions.length === 0 ? (
         <p className="text-xs text-yellow-600 bg-yellow-50 rounded px-3 py-2">
-          No entries found — go to Step 3A or 3B first.
+          No primary isolated entries found — go to Step 3A first.
         </p>
       ) : (
         <select value={linkedId || ""} onChange={(e) => onChange(e.target.value)}
-          className="w-full border border-purple-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-purple-400 focus:outline-none">
-          <option value="">— Select ISO or ISOMOR ID —</option>
-          {/* Group ISO options */}
-          {linkOptions.filter(o => o.group === "Primary Isolated").length > 0 && (
-            <optgroup label="Primary Isolated (ISO)">
-              {linkOptions.filter(o => o.group === "Primary Isolated").map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </optgroup>
-          )}
-          {/* Group ISOMOR options */}
-          {linkOptions.filter(o => o.group === "Isolated Morphology").length > 0 && (
-            <optgroup label="Isolated Morphology (ISOMOR)">
-              {linkOptions.filter(o => o.group === "Isolated Morphology").map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </optgroup>
-          )}
+          className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none">
+          <option value="">— Select Primary Isolated ID —</option>
+          {linkOptions.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
         </select>
       )}
       {testId && (
         <div className="mt-2">
-          <p className="text-xs font-semibold text-purple-500 uppercase tracking-wider mb-1">
+          <p className="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-1">
             Auto-generated Test ID:
           </p>
-          <p className="text-sm font-bold font-mono text-purple-700 break-all">{testId}</p>
+          <p className="text-sm font-bold font-mono text-blue-700 break-all">{testId}</p>
         </div>
       )}
     </div>
@@ -313,7 +286,7 @@ export default function Step3C_Misc() {
       {linkOptions.length === 0 && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3">
           <p className="text-yellow-700 text-sm">
-            No entries found. Go to Step 3A or 3B first — each test run must be linked to an ISO or ISOMOR entry.
+            No primary isolated entries found. Go to Step 3A first — each test run must be linked to a Primary Isolated entry.
           </p>
         </div>
       )}
@@ -327,7 +300,7 @@ export default function Step3C_Misc() {
                 <div>
                   <h3 className="font-semibold text-gray-700">Run #{index + 1}</h3>
                   {run.testId && (
-                    <p className="text-xs font-mono text-purple-600 mt-0.5 break-all">{run.testId}</p>
+                    <p className="text-xs font-mono text-blue-600 mt-0.5 break-all">{run.testId}</p>
                   )}
                 </div>
                 {antibacterialRuns.length > 1 && (
@@ -381,7 +354,7 @@ export default function Step3C_Misc() {
                 <div>
                   <h3 className="font-semibold text-gray-700">Run #{index + 1}</h3>
                   {run.testId && (
-                    <p className="text-xs font-mono text-purple-600 mt-0.5 break-all">{run.testId}</p>
+                    <p className="text-xs font-mono text-blue-600 mt-0.5 break-all">{run.testId}</p>
                   )}
                 </div>
                 {antimalarialRuns.length > 1 && (
@@ -536,7 +509,7 @@ function RunBlock({
         <div>
           <h3 className="font-semibold text-gray-700">Run #{index + 1}</h3>
           {run.testId && (
-            <p className="text-xs font-mono text-purple-600 mt-0.5 break-all">{run.testId}</p>
+            <p className="text-xs font-mono text-blue-600 mt-0.5 break-all">{run.testId}</p>
           )}
         </div>
         {canRemove && (
@@ -547,42 +520,31 @@ function RunBlock({
         )}
       </div>
 
-      {/* ================= LINK SELECTOR ================= */}
-      <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+      {/* ✅ ISO ONLY SELECTOR */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
         <div className="flex items-center gap-2 mb-2">
-          <Link size={14} className="text-purple-600" />
-          <p className="text-xs font-semibold text-purple-600 uppercase tracking-wider">
-            Link to ISO or Isolated Morphology
+          <Link size={14} className="text-blue-600" />
+          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">
+            Link to Primary Isolated
           </p>
         </div>
         {linkOptions.length === 0 ? (
           <p className="text-xs text-yellow-600 bg-yellow-50 rounded px-3 py-2">
-            No entries found — go to Step 3A or 3B first.
+            No primary isolated entries found — go to Step 3A first.
           </p>
         ) : (
           <select value={run.linkedId || ""} onChange={(e) => onLinkChange(e.target.value)}
-            className="w-full border border-purple-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-purple-400 focus:outline-none">
-            <option value="">— Select ISO or ISOMOR ID —</option>
-            {linkOptions.filter(o => o.group === "Primary Isolated").length > 0 && (
-              <optgroup label="Primary Isolated (ISO)">
-                {linkOptions.filter(o => o.group === "Primary Isolated").map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </optgroup>
-            )}
-            {linkOptions.filter(o => o.group === "Isolated Morphology").length > 0 && (
-              <optgroup label="Isolated Morphology (ISOMOR)">
-                {linkOptions.filter(o => o.group === "Isolated Morphology").map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </optgroup>
-            )}
+            className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none">
+            <option value="">— Select Primary Isolated ID —</option>
+            {linkOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
           </select>
         )}
         {run.testId && (
           <div className="mt-2">
-            <p className="text-xs font-semibold text-purple-500 uppercase tracking-wider mb-1">Test ID:</p>
-            <p className="text-sm font-bold font-mono text-purple-700 break-all">{run.testId}</p>
+            <p className="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-1">Test ID:</p>
+            <p className="text-sm font-bold font-mono text-blue-700 break-all">{run.testId}</p>
           </div>
         )}
       </div>

@@ -7,6 +7,7 @@ import {
 import { DateRange } from "react-date-range";
 import { useSampleFormContext } from "../context/SampleFormContext";
 import { samplesAPI } from "../services/api";
+import { toastSuccess, toastError } from "../utils/toast";
 
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
@@ -109,48 +110,51 @@ export default function EditSample() {
 
       loadSampleForEdit({
         metadata: {
-          sampleId: full.sample_id,
-          sampleName: full.sample_name,
-          sampleType: full.sample_type,
-          projectType: full.project_type,
-          projectNumber: full.project_number,
-          sampleNumber: full.sample_number,
-          diveSite: full.dive_site,
-          collectorName: full.collector_name,
+          sampleId:       full.sample_id,
+          sampleName:     full.sample_name,
+          sampleType:     full.sample_type,
+          partOfSample:   full.part_of_sample,
+          projectType:    full.project_type,
+          projectNumber:  full.project_number,
+          sampleNumber:   full.sample_number,
+          diveSite:       full.dive_site,
+          collectorName:  full.collector_name,
           collectionDate: full.collection_date?.split("T")[0] || "",
-          latitude: full.latitude,
-          longitude: full.longitude,
+          latitude:       full.latitude,
+          longitude:      full.longitude,
           storageLocation: full.storage_location,
-          kingdom: full.kingdom,
-          genus: full.genus,
-          family: full.family,
-          species: full.species,
-          depth: full.depth,
-          temperature: full.temperature,
-          substrate: full.substrate,
-          sampleLength: full.sample_length,
+          kingdom:        full.kingdom,
+          genus:          full.genus,
+          family:         full.family,
+          species:        full.species,
+          depth:          full.depth,
+          temperature:    full.temperature,
+          substrate:      full.substrate,
+          sampleLength:   full.sample_length,
         },
-        morphology: full.morphology || {},
+        morphology:   full.morphology   || {},
         microbiology: full.microbiology || {},
-        molecular: full.molecular || {},
-        publication: full.publication || { links: [] },
+        molecular:    full.molecular    || {},
+        publication:  full.publication  || { links: [] },
       });
 
       navigate("/add/step1", { state: { fromEdit: true } });
     } catch (err) {
       console.error("Failed to load sample for edit:", err);
-      alert("Failed to load sample. Please try again.");
+      toastError("Failed to load sample. Please try again.");
     }
   };
 
+  /* ✅ UPDATED: toast instead of alert */
   const handleDelete = async (sampleId) => {
     if (!confirm("Are you sure you want to delete this sample?")) return;
     try {
       await samplesAPI.delete(sampleId);
       setSamples(prev => prev.filter(s => s.sample_id !== sampleId));
+      toastSuccess("Sample deleted successfully.");
     } catch (err) {
       console.error("Failed to delete sample:", err);
-      alert("Failed to delete sample. Please try again.");
+      toastError("Failed to delete sample. Please try again.");
     }
   };
 
@@ -180,7 +184,6 @@ export default function EditSample() {
             open={sidebarOpen} active />
           <SidebarButton icon={<SearchIcon className="text-purple-600" />} label="Search Sample"
             open={sidebarOpen} onClick={() => navigate("/searchsample")} />
-          {/* ✅ ADDED */}
           <SidebarButton icon={<BookOpen className="text-blue-500" />} label="Manual"
             open={sidebarOpen} onClick={() => navigate("/manual")} />
         </nav>

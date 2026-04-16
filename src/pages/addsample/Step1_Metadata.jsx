@@ -26,6 +26,23 @@ const STORAGE_LOCATIONS = [
   "Ethanol Preserved", "Formalin Preserved",
 ];
 
+/* ================= GPS VALIDATION ================= */
+const validateLat = (v) => {
+  if (v === "" || v === null || v === undefined) return null;
+  const n = parseFloat(v);
+  if (isNaN(n)) return "Latitude must be a number";
+  if (n < -90 || n > 90) return "Latitude must be between -90 and 90";
+  return null;
+};
+
+const validateLng = (v) => {
+  if (v === "" || v === null || v === undefined) return null;
+  const n = parseFloat(v);
+  if (isNaN(n)) return "Longitude must be a number";
+  if (n < -180 || n > 180) return "Longitude must be between -180 and 180";
+  return null;
+};
+
 /* ================= FLY TO LOCATION ================= */
 function FlyToLocation({ coords }) {
   const map = useMap();
@@ -65,17 +82,20 @@ export default function Step1_Metadata() {
   });
 
   /* ================= MAP SEARCH STATE ================= */
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery]   = useState("");
   const [searchResults, setSearchResults] = useState([]);
-  const [searching, setSearching] = useState(false);
-  const [flyTo, setFlyTo] = useState(null);
+  const [searching, setSearching]       = useState(false);
+  const [flyTo, setFlyTo]               = useState(null);
   const searchRef = useRef(null);
 
-  const toggle = (key) => setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
+  /* ================= GPS ERROR STATE ================= */
+  const [latError, setLatError] = useState(null);
+  const [lngError, setLngError] = useState(null);
+
+  const toggle   = (key) => setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
   const setValue = (field, value) => updateSection("metadata", { [field]: value });
 
   /* ================= LIVE SAMPLE ID ================= */
-  /* ✅ UPDATED: now includes partOfSample */
   const previewId = generateSampleId(
     metadata.sampleType,
     metadata.projectType,
@@ -83,6 +103,26 @@ export default function Step1_Metadata() {
     metadata.projectNumber,
     metadata.sampleNumber
   );
+
+  /* ================= GPS HANDLERS ================= */
+  const handleLatChange = (v) => {
+    setValue("latitude", v);
+    setLatError(validateLat(v));
+  };
+
+  const handleLngChange = (v) => {
+    setValue("longitude", v);
+    setLngError(validateLng(v));
+  };
+
+  /* ── when map is clicked, always valid so clear errors ── */
+  const handleMapClick = (lat, lng) => {
+    setValue("latitude", lat);
+    setValue("longitude", lng);
+    setFlyTo([lat, lng]);
+    setLatError(null);
+    setLngError(null);
+  };
 
   /* ================= SEARCH HANDLER ================= */
   const handleSearch = async () => {
@@ -111,6 +151,9 @@ export default function Step1_Metadata() {
     setFlyTo([lat, lng]);
     setSearchResults([]);
     setSearchQuery(result.display_name.split(",")[0]);
+    /* search results are always valid coords */
+    setLatError(null);
+    setLngError(null);
   };
 
   /* ================= CLOSE RESULTS ON OUTSIDE CLICK ================= */
@@ -123,6 +166,8 @@ export default function Step1_Metadata() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  const gpsHasError = latError || lngError;
 
   return (
     <div className="space-y-8">
@@ -172,11 +217,9 @@ export default function Step1_Metadata() {
       {/* ================= GENERAL INFO ================= */}
       <Box title="General Sample Information" open={open.general} toggle={() => toggle("general")}>
         <Grid>
-          {/* ✅ Sample Type first */}
           <Select label="Sample Type" value={metadata.sampleType || ""}
             onChange={(v) => setValue("sampleType", v)} options={SAMPLE_TYPES} />
 
-          {/* ✅ Part of Sample — right after Sample Type */}
           <div>
             <label className="block text-sm mb-1">
               Part of Sample <span className="text-red-500">*</span>
@@ -247,7 +290,21 @@ export default function Step1_Metadata() {
       </Box>
 
       {/* ================= MAP ================= */}
-      <Box title="Map Location Picker" open={open.map} toggle={() => toggle("map")}>
+      <Box
+        title={
+          <span className="flex items-center gap-2">
+            Map Location Picker
+            {gpsHasError && (
+              <span className="text-xs font-normal text-red-500 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+                ⚠ Invalid coordinates
+              </span>
+            )}
+          </span>
+        }
+        open={open.map}
+        toggle={() => toggle("map")}
+      >
+        {/* ── Search ── */}
         <div ref={searchRef} className="relative mb-4">
           <div className="flex gap-2">
             <input type="text" value={searchQuery}
@@ -276,28 +333,73 @@ export default function Step1_Metadata() {
           )}
         </div>
 
+        {/* ── Map ── */}
         <div className="h-64 rounded-xl overflow-hidden mb-4">
           <MapContainer center={[-8.34, 115.54]} zoom={12} className="h-full w-full">
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
             <LocationMarker
               lat={metadata.latitude}
               lng={metadata.longitude}
-              onLocationSelect={(lat, lng) => {
-                setValue("latitude", lat);
-                setValue("longitude", lng);
-                setFlyTo([lat, lng]);
-              }}
+              onLocationSelect={handleMapClick}
             />
             <FlyToLocation coords={flyTo} />
           </MapContainer>
         </div>
 
+        {/* ── GPS Inputs with validation ── */}
         <Grid>
-          <Input label="Latitude" value={metadata.latitude || ""}
-            onChange={(v) => setValue("latitude", v)} />
-          <Input label="Longitude" value={metadata.longitude || ""}
-            onChange={(v) => setValue("longitude", v)} />
+          {/* Latitude */}
+          <div>
+            <label className="block text-sm mb-1">Latitude</label>
+            <input
+              type="number"
+              value={metadata.latitude || ""}
+              onChange={(e) => handleLatChange(e.target.value)}
+              placeholder="-90 to 90"
+              className={`w-full rounded-lg border px-3 py-2 text-base transition ${
+                latError
+                  ? "border-red-400 bg-red-50 focus:ring-red-300"
+                  : "focus:ring-2 focus:ring-blue-400"
+              } focus:outline-none`}
+            />
+            {latError && (
+              <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                <span>⚠</span> {latError}
+              </p>
+            )}
+          </div>
+
+          {/* Longitude */}
+          <div>
+            <label className="block text-sm mb-1">Longitude</label>
+            <input
+              type="number"
+              value={metadata.longitude || ""}
+              onChange={(e) => handleLngChange(e.target.value)}
+              placeholder="-180 to 180"
+              className={`w-full rounded-lg border px-3 py-2 text-base transition ${
+                lngError
+                  ? "border-red-400 bg-red-50 focus:ring-red-300"
+                  : "focus:ring-2 focus:ring-blue-400"
+              } focus:outline-none`}
+            />
+            {lngError && (
+              <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                <span>⚠</span> {lngError}
+              </p>
+            )}
+          </div>
         </Grid>
+
+        {/* ── GPS summary if both valid ── */}
+        {metadata.latitude && metadata.longitude && !latError && !lngError && (
+          <div className="mt-3 bg-green-50 border border-green-200 rounded-lg px-4 py-2 flex items-center gap-2">
+            <span className="text-green-600 text-sm">✓</span>
+            <p className="text-xs text-green-700 font-mono">
+              {parseFloat(metadata.latitude).toFixed(6)}, {parseFloat(metadata.longitude).toFixed(6)}
+            </p>
+          </div>
+        )}
       </Box>
     </div>
   );

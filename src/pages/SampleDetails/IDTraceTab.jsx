@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 
 /* ================= CONSTANTS ================= */
-const NW = 200, NH = 64, GAP = 14;
-const LX = [32, 296, 560, 824];
+const NW = 200, NH = 72, GAP = 14;
+const LX = [32, 280, 528, 776];
 
 const PAL = [
   { bg:"#EFF6FF", border:"#93C5FD", accent:"#3B82F6", text:"#1E40AF" },
@@ -27,49 +27,54 @@ function buildTree(sample) {
   const bt   = t.biochemicalRuns   || [];
   const ebt  = t.enzymaticRuns     || [];
 
+  const isoChildren = iso.map(r => {
+    const isoId       = r.isolatedId || `iso-${Math.random()}`;
+    const isoMorEntry = mor.find(m => m.linkedIsolatedId === isoId);
+    const isoMorId    = isoMorEntry?.isoMorId || null;
+
+    /* ✅ tests linked to this ISO — all at level 3 as direct children */
+    const tests = [
+      ...absy.filter(x => x.linkedId === isoId && x.testId)
+        .map(x => ({ id:x.testId, label:"Antibacterial", level:3,
+                     desc:x.pathogen||"—", children:[] })),
+      ...aasy.filter(x => x.linkedId === isoId && x.testId)
+        .map(x => ({ id:x.testId, label:"Antimalarial",  level:3,
+                     desc:x.plasmodiumSpecies||"—", children:[] })),
+      ...bt  .filter(x => x.linkedId === isoId && x.testId)
+        .map(x => ({ id:x.testId, label:"Biochemical",   level:3,
+                     desc:(x.checked||[]).slice(0,2).join(", ")||"—", children:[] })),
+      ...ebt .filter(x => x.linkedId === isoId && x.testId)
+        .map(x => ({ id:x.testId, label:"Enzymatic",     level:3,
+                     desc:(x.checked||[]).slice(0,2).join(", ")||"—", children:[] })),
+    ];
+
+    return {
+      id: isoId,
+      label: "Primary Isolated", level: 2,
+      desc: [r.isolatedType, r.agarMedia, r.dilution].filter(Boolean).join(" · "),
+      /* ✅ ISOMOR ID embedded in the card — not a separate node */
+      isoMorId: isoMorId,
+      isoMorWarning: !isoMorId,
+      children: tests
+    };
+  });
+
+  const microNode = {
+    id: `${sid}.MICRO`,
+    label: "Microbiology", level: 1,
+    desc: `${iso.length} isolated ${iso.length === 1 ? "entry" : "entries"}`,
+    children: isoChildren
+  };
+
   return {
     id: sid, label:"Sample", level:0,
     desc: [sample.sample_type, sample.kingdom].filter(Boolean).join(" · "),
     children: [
-      sid && {
-        id:`${sid}.MOR`, label:"Morphology", level:1,
-        desc:"SEM · Microscope · Notes", independent:true, children:[]
-      },
-      sid && {
-        id:`${sid}.MOL`, label:"Molecular", level:1,
-        desc:"DNA · PCR · Sequencing", independent:true, children:[]
-      },
-      ...iso.map(r => ({
-        id: r.isolatedId || `iso-${Math.random()}`,
-        label:"Primary Isolated", level:1,
-        desc:[r.isolatedType, r.agarMedia, r.dilution].filter(Boolean).join(" · "),
-        children: mor.filter(m => m.linkedIsolatedId === r.isolatedId).map(m => {
-          /* ✅ ISOMOR ID is now flat — no number */
-          const isoMorId = m.isoMorId || `isomor-${Math.random()}`;
-
-          /* ✅ tests use linkedId, can match either ISO or ISOMOR */
-          const tests = [
-            ...absy
-              .filter(x => (x.linkedId === isoMorId || x.linkedId === r.isolatedId) && x.testId)
-              .map(x => ({ id:x.testId, label:"Antibacterial", level:3, desc:x.pathogen||"—", children:[] })),
-            ...aasy
-              .filter(x => (x.linkedId === isoMorId || x.linkedId === r.isolatedId) && x.testId)
-              .map(x => ({ id:x.testId, label:"Antimalarial",  level:3, desc:x.plasmodiumSpecies||"—", children:[] })),
-            ...bt
-              .filter(x => (x.linkedId === isoMorId || x.linkedId === r.isolatedId) && x.testId)
-              .map(x => ({ id:x.testId, label:"Biochemical",   level:3, desc:(x.checked||[]).slice(0,2).join(", ")||"—", children:[] })),
-            ...ebt
-              .filter(x => (x.linkedId === isoMorId || x.linkedId === r.isolatedId) && x.testId)
-              .map(x => ({ id:x.testId, label:"Enzymatic",     level:3, desc:(x.checked||[]).slice(0,2).join(", ")||"—", children:[] })),
-          ];
-
-          return {
-            id: isoMorId,
-            label:"Isolated Morphology", level:2, desc:"",
-            children: tests
-          };
-        })
-      }))
+      sid && { id:`${sid}.MOR`, label:"Morphology", level:1,
+               desc:"SEM · Microscope · Notes", independent:true, children:[] },
+      sid && { id:`${sid}.MOL`, label:"Molecular",  level:1,
+               desc:"DNA · PCR · Sequencing",   independent:true, children:[] },
+      iso.length > 0 ? microNode : null,
     ].filter(Boolean)
   };
 }
@@ -144,6 +149,10 @@ function AnimatedNode({ node, isSel, inChain, isHov, isDim, onSelect, onToggle, 
   const tx = node.x;
   const ty = node.cy - NH / 2;
 
+  /* ── does this ISO card have ISOMOR info to show? ── */
+  const showIsoMor = node.isoMorId !== undefined;
+  const hasWarning = node.isoMorWarning;
+
   return (
     <g className="mn"
       transform={`translate(${tx}, ${ty})`}
@@ -159,12 +168,12 @@ function AnimatedNode({ node, isSel, inChain, isHov, isDim, onSelect, onToggle, 
         opacity={isSel ? 0.15 : 0.04}
         style={{ transition:"opacity 0.3s ease" }} />
 
-      {/* card body — selects only */}
+      {/* card body */}
       <rect x={0} y={0} width={NW} height={NH} rx={10}
         fill={isSel ? c.accent : c.bg}
         stroke={isSel ? c.accent : (inChain||isHov) ? c.accent : "#E5E7EB"}
         strokeWidth={isSel ? 0 : (inChain||isHov) ? 1.5 : 0.5}
-        style={{ cursor:"pointer", transition:"fill 0.3s ease, stroke 0.3s ease, stroke-width 0.3s ease" }}
+        style={{ cursor:"pointer", transition:"fill 0.3s ease, stroke 0.3s ease" }}
         onClick={onSelect} />
 
       {/* left accent bar */}
@@ -173,60 +182,103 @@ function AnimatedNode({ node, isSel, inChain, isHov, isDim, onSelect, onToggle, 
         style={{ transition:"fill 0.3s ease" }}
         onClick={onSelect} />
 
-      {/* type label */}
-      <text x={14} y={19} fontSize={9} fontWeight={600}
-        fill={isSel ? "rgba(255,255,255,0.75)" : c.text}
-        fontFamily="sans-serif" letterSpacing="0.05em"
-        style={{ transition:"fill 0.3s ease", pointerEvents:"none" }}>
-        {node.label.toUpperCase()}
-      </text>
-
-      {/* independent badge */}
-      {node.independent && (
+      {/* ── ISO card with ISOMOR divider ── */}
+      {showIsoMor ? (
         <>
-          <rect x={NW-70} y={5} width={62} height={13} rx={6}
-            fill={isSel ? "rgba(255,255,255,0.25)" : c.accent}
-            opacity={isSel ? 1 : 0.18}
-            style={{ transition:"all 0.3s ease", pointerEvents:"none" }} />
-          <text x={NW-39} y={15} fontSize={8} textAnchor="middle"
-            fill={isSel ? "white" : c.accent}
-            fontFamily="sans-serif" fontWeight={600}
-            style={{ transition:"fill 0.3s ease", pointerEvents:"none" }}>
-            Independent
+          {/* divider line */}
+          <line x1={8} y1={NH/2} x2={NW-8} y2={NH/2}
+            stroke={isSel ? "rgba(255,255,255,0.2)" : "#E5E7EB"}
+            strokeWidth={0.5} style={{ pointerEvents:"none" }} />
+
+          {/* top half — ISO label + short ID */}
+          <text x={14} y={13} fontSize={8} fontWeight={600}
+            fill={isSel ? "rgba(255,255,255,0.7)" : c.text}
+            fontFamily="sans-serif" letterSpacing="0.05em"
+            style={{ pointerEvents:"none" }}>
+            {node.label.toUpperCase()}
           </text>
+          <text x={14} y={27} fontSize={11} fontWeight={500}
+            fill={isSel ? "white" : c.text}
+            fontFamily="monospace"
+            style={{ pointerEvents:"none" }}>
+            {clip(short(node.id, node.level), 21)}
+          </text>
+
+          {/* bottom half — ISOMOR label + value */}
+          <text x={14} y={NH/2 + 10} fontSize={8} fontWeight={600}
+            fill={hasWarning
+              ? (isSel ? "rgba(255,200,100,0.9)" : "#F97316")
+              : (isSel ? "rgba(255,255,255,0.7)" : "#8B5CF6")}
+            fontFamily="sans-serif" letterSpacing="0.05em"
+            style={{ pointerEvents:"none" }}>
+            ISOMOR
+          </text>
+          <text x={14} y={NH/2 + 22} fontSize={hasWarning ? 9 : 10} fontWeight={500}
+            fill={hasWarning
+              ? (isSel ? "rgba(255,200,100,0.9)" : "#F97316")
+              : (isSel ? "rgba(200,180,255,1)" : "#7C3AED")}
+            fontFamily={hasWarning ? "sans-serif" : "monospace"}
+            style={{ pointerEvents:"none" }}>
+            {hasWarning
+              ? "⚠ Not linked yet"
+              : clip(short(node.isoMorId, 3), 21)}
+          </text>
+        </>
+      ) : (
+        <>
+          {/* normal card layout */}
+          <text x={14} y={19} fontSize={9} fontWeight={600}
+            fill={isSel ? "rgba(255,255,255,0.75)" : c.text}
+            fontFamily="sans-serif" letterSpacing="0.05em"
+            style={{ pointerEvents:"none" }}>
+            {node.label.toUpperCase()}
+          </text>
+
+          {node.independent && (
+            <>
+              <rect x={NW-70} y={5} width={62} height={13} rx={6}
+                fill={isSel ? "rgba(255,255,255,0.25)" : c.accent}
+                opacity={isSel ? 1 : 0.18}
+                style={{ pointerEvents:"none" }} />
+              <text x={NW-39} y={15} fontSize={8} textAnchor="middle"
+                fill={isSel ? "white" : c.accent}
+                fontFamily="sans-serif" fontWeight={600}
+                style={{ pointerEvents:"none" }}>
+                Independent
+              </text>
+            </>
+          )}
+
+          <text x={14} y={40} fontSize={12} fontWeight={500}
+            fill={isSel ? "white" : c.text}
+            fontFamily="monospace"
+            style={{ pointerEvents:"none" }}>
+            {clip(short(node.id, node.level), 21)}
+          </text>
+
+          {node.desc && (
+            <text x={14} y={57} fontSize={9}
+              fill={isSel ? "rgba(255,255,255,0.65)" : "#9CA3AF"}
+              fontFamily="sans-serif"
+              style={{ pointerEvents:"none" }}>
+              {clip(node.desc, 27)}
+            </text>
+          )}
         </>
       )}
 
-      {/* short ID */}
-      <text x={14} y={39} fontSize={12} fontWeight={500}
-        fill={isSel ? "white" : c.text}
-        fontFamily="monospace"
-        style={{ transition:"fill 0.3s ease", pointerEvents:"none" }}>
-        {clip(short(node.id, node.level), 21)}
-      </text>
-
-      {/* desc */}
-      {node.desc && (
-        <text x={14} y={54} fontSize={9}
-          fill={isSel ? "rgba(255,255,255,0.65)" : "#9CA3AF"}
-          fontFamily="sans-serif"
-          style={{ transition:"fill 0.3s ease", pointerEvents:"none" }}>
-          {clip(node.desc, 27)}
-        </text>
-      )}
-
-      {/* expand/collapse button — toggle only */}
+      {/* expand/collapse button */}
       {node.hasKids && (
         <g onClick={e => { e.stopPropagation(); onToggle(); }}
           style={{ cursor:"pointer" }}>
-          <rect x={NW-21} y={NH/2-10} width={18} height={18} rx={5}
+          <rect x={NW-21} y={NH/2-9} width={18} height={18} rx={5}
             fill={isSel ? "rgba(255,255,255,0.25)" : c.accent}
             opacity={isSel ? 1 : 0.18}
             style={{ transition:"all 0.3s ease" }} />
           <text x={NW-12} y={NH/2+5} fontSize={14} textAnchor="middle"
             fill={isSel ? "white" : c.accent}
             fontFamily="sans-serif" fontWeight={600}
-            style={{ transition:"fill 0.3s ease", userSelect:"none" }}>
+            style={{ userSelect:"none" }}>
             {node.isCollapsed ? "+" : "−"}
           </text>
         </g>
@@ -285,11 +337,7 @@ export default function IDTraceTab({ sample }) {
       const delta = e.deltaY > 0 ? 0.9 : 1.1;
       setTf(t => {
         const ns = Math.min(2.5, Math.max(0.2, t.s * delta));
-        return {
-          s: ns,
-          x: mx - (mx - t.x) * (ns / t.s),
-          y: my - (my - t.y) * (ns / t.s),
-        };
+        return { s:ns, x:mx-(mx-t.x)*(ns/t.s), y:my-(my-t.y)*(ns/t.s) };
       });
     };
     el.addEventListener("wheel", fn, { passive:false });
@@ -314,19 +362,25 @@ export default function IDTraceTab({ sample }) {
     color:"#6B7280", cursor:"pointer", transition:"background 0.15s"
   };
 
+  const selPal = selectedNode ? pal(selectedNode.level) : null;
+
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
 
       {/* ── header ── */}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8 }}>
-        <div style={{ display:"flex", gap:16, flexWrap:"wrap" }}>
-          {[["Sample","#3B82F6"],["Morphology / Molecular","#22C55E"],["Isolated / IsoMor","#8B5CF6"],["Tests","#F59E0B"]]
-            .map(([lbl, clr]) => (
-              <div key={lbl} style={{ display:"flex", alignItems:"center", gap:5 }}>
-                <div style={{ width:9, height:9, borderRadius:2, background:clr, flexShrink:0 }} />
-                <span style={{ fontSize:11, color:"#9CA3AF" }}>{lbl}</span>
-              </div>
-            ))}
+        <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+          {[
+            ["Sample","#3B82F6"],
+            ["MOR / MOL / Microbiology","#22C55E"],
+            ["Primary Isolated + ISOMOR","#8B5CF6"],
+            ["Tests","#F59E0B"],
+          ].map(([lbl, clr]) => (
+            <div key={lbl} style={{ display:"flex", alignItems:"center", gap:5 }}>
+              <div style={{ width:9, height:9, borderRadius:2, background:clr, flexShrink:0 }} />
+              <span style={{ fontSize:11, color:"#9CA3AF" }}>{lbl}</span>
+            </div>
+          ))}
         </div>
         <div style={{ display:"flex", gap:6, alignItems:"center" }}>
           <span style={{ fontSize:11, color:"#D1D5DB", marginRight:4 }}>
@@ -347,7 +401,7 @@ export default function IDTraceTab({ sample }) {
       {/* ── canvas + side panel ── */}
       <div style={{ display:"flex", gap:12, alignItems:"stretch" }}>
 
-        {/* ── mind map canvas ── */}
+        {/* ── canvas ── */}
         <div style={{
           flex:1, border:"1px solid #E5E7EB", borderRadius:16,
           overflow:"hidden", background:"#FAFAFA",
@@ -367,10 +421,7 @@ export default function IDTraceTab({ sample }) {
                   <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
                   <feFlood floodColor={p.accent} floodOpacity="0.35" result="col" />
                   <feComposite in="col" in2="blur" operator="in" result="glow" />
-                  <feMerge>
-                    <feMergeNode in="glow" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
+                  <feMerge><feMergeNode in="glow" /><feMergeNode in="SourceGraphic" /></feMerge>
                 </filter>
               ))}
             </defs>
@@ -402,10 +453,10 @@ export default function IDTraceTab({ sample }) {
         <div style={{
           width:240, flexShrink:0,
           border: selectedNode
-            ? `1.5px solid ${pal(selectedNode.level).border}`
+            ? `1.5px solid ${selPal.border}`
             : "1px dashed #E5E7EB",
           borderRadius:16, padding:"16px 14px",
-          background: selectedNode ? pal(selectedNode.level).bg : "#FAFAFA",
+          background: selectedNode ? selPal.bg : "#FAFAFA",
           transition:"all 0.3s ease",
           height:520, overflowY:"auto",
           display:"flex", flexDirection:"column", gap:12
@@ -413,8 +464,7 @@ export default function IDTraceTab({ sample }) {
           {selectedNode ? (
             <>
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                <div style={{ width:8, height:8, borderRadius:2,
-                              background:pal(selectedNode.level).accent }} />
+                <div style={{ width:8, height:8, borderRadius:2, background:selPal.accent }} />
                 <button onClick={() => setSelected(null)}
                   style={{ fontSize:12, color:"#9CA3AF", background:"none",
                            border:"none", cursor:"pointer", padding:"2px 6px", borderRadius:4 }}>
@@ -423,34 +473,56 @@ export default function IDTraceTab({ sample }) {
               </div>
 
               <div>
-                <p style={{ fontSize:10, fontWeight:600,
-                             color:pal(selectedNode.level).text,
+                <p style={{ fontSize:10, fontWeight:600, color:selPal.text,
                              textTransform:"uppercase", letterSpacing:"0.05em",
                              margin:"0 0 4px" }}>
                   {selectedNode.label}
                 </p>
                 {selectedNode.independent && (
                   <span style={{ fontSize:10, padding:"1px 8px", borderRadius:10,
-                                 background:pal(selectedNode.level).accent,
-                                 color:"white", fontWeight:500 }}>
+                                 background:selPal.accent, color:"white", fontWeight:500 }}>
                     Independent
                   </span>
                 )}
               </div>
 
+              {/* ISO ID */}
               <div style={{ background:"white", borderRadius:10, padding:"10px 12px",
-                            border:`1px solid ${pal(selectedNode.level).border}` }}>
+                            border:`1px solid ${selPal.border}` }}>
                 <p style={{ fontSize:9, fontWeight:600, color:"#9CA3AF",
                              textTransform:"uppercase", letterSpacing:"0.05em",
                              margin:"0 0 5px" }}>
                   Full ID
                 </p>
                 <p style={{ fontFamily:"monospace", fontSize:11, fontWeight:500,
-                             color:pal(selectedNode.level).text,
-                             wordBreak:"break-all", margin:0, lineHeight:1.6 }}>
+                             color:selPal.text, wordBreak:"break-all",
+                             margin:0, lineHeight:1.6 }}>
                   {selectedNode.id}
                 </p>
               </div>
+
+              {/* ISOMOR info if ISO card */}
+              {selectedNode.isoMorId !== undefined && (
+                <div style={{ background:"white", borderRadius:10, padding:"10px 12px",
+                              border:`1px solid ${selectedNode.isoMorWarning ? "#FED7AA" : "#C4B5FD"}` }}>
+                  <p style={{ fontSize:9, fontWeight:600, color:"#9CA3AF",
+                               textTransform:"uppercase", letterSpacing:"0.05em",
+                               margin:"0 0 5px" }}>
+                    Isolated Morphology
+                  </p>
+                  {selectedNode.isoMorWarning ? (
+                    <p style={{ fontSize:11, color:"#F97316", margin:0, lineHeight:1.5 }}>
+                      ⚠ No ISOMOR linked yet — go to Step 3B to add one.
+                    </p>
+                  ) : (
+                    <p style={{ fontFamily:"monospace", fontSize:11, fontWeight:500,
+                                 color:"#7C3AED", wordBreak:"break-all",
+                                 margin:0, lineHeight:1.6 }}>
+                      {selectedNode.isoMorId}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {selectedNode.desc && (
                 <div>

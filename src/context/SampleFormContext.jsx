@@ -38,12 +38,10 @@ const initial = {
   },
   microbiology: {
     primaryIsolatedRuns: [],
-
-    /* ✅ CHANGED: isolatedMorphology is now an array of runs */
     isolatedMorphologyRuns: [],
-
     microbiologyTests: {
       antibacterialRuns: [],
+      antimalarialRuns: [],
       biochemicalRuns: [],
       enzymaticRuns: [],
       testNotes: "",
@@ -89,15 +87,55 @@ const initial = {
   }
 };
 
+/* ================= CLEAN MICROBIOLOGY ================= */
+// Strips empty runs before submitting to the API
+const cleanMicrobiology = (microbiology) => {
+  if (!microbiology) return microbiology;
+
+  /* ── Primary Isolated — must have isolatedId ── */
+  const primaryIsolatedRuns = (microbiology.primaryIsolatedRuns || [])
+    .filter(r => r.isolatedId && r.isolatedId.trim() !== "");
+
+  /* ── Isolated Morphology — must have isoMorId ── */
+  const isolatedMorphologyRuns = (microbiology.isolatedMorphologyRuns || [])
+    .filter(r => r.isoMorId && r.isoMorId.trim() !== "");
+
+  const tests = microbiology.microbiologyTests || {};
+
+  /* ── Test runs — must have linkedId AND testId ── */
+  const antibacterialRuns = (tests.antibacterialRuns || [])
+    .filter(r => r.linkedId && r.testId);
+
+  const antimalarialRuns = (tests.antimalarialRuns || [])
+    .filter(r => r.linkedId && r.testId);
+
+  const biochemicalRuns = (tests.biochemicalRuns || [])
+    .filter(r => r.linkedId && r.testId);
+
+  const enzymaticRuns = (tests.enzymaticRuns || [])
+    .filter(r => r.linkedId && r.testId);
+
+  return {
+    ...microbiology,
+    primaryIsolatedRuns,
+    isolatedMorphologyRuns,
+    microbiologyTests: {
+      ...tests,
+      antibacterialRuns,
+      antimalarialRuns,
+      biochemicalRuns,
+      enzymaticRuns,
+    }
+  };
+};
+
 export function SampleFormProvider({ children }) {
   const [mode, setMode] = useState("add");
   const [editingSampleId, setEditingSampleId] = useState(null);
 
-  /* ✅ Always starts blank — no localStorage draft */
   const [formData, setFormData] = useState(initial);
 
   /* ================= AUTO GENERATE SAMPLE ID ================= */
-  /* ✅ UPDATED: now includes partOfSample */
   const computedSampleId = generateSampleId(
     formData.metadata?.sampleType,
     formData.metadata?.projectType,
@@ -150,30 +188,33 @@ export function SampleFormProvider({ children }) {
 
     const sampleId = computedSampleId || `SAMPLE-${Date.now()}`;
 
+    /* ✅ Clean empty runs before sending */
+    const cleanedMicrobiology = cleanMicrobiology(microbiology);
+
     const payload = {
-      sample_id: sampleId,
-      sample_name: metadata.sampleName,
-      sample_type: metadata.sampleType,
-      project_type: metadata.projectType,
-      part_of_sample: metadata.partOfSample,
-      project_number: metadata.projectNumber,
-      sample_number: metadata.sampleNumber,
-      dive_site: metadata.diveSite,
-      collector_name: metadata.collectorName,
+      sample_id:       sampleId,
+      sample_name:     metadata.sampleName,
+      sample_type:     metadata.sampleType,
+      project_type:    metadata.projectType,
+      part_of_sample:  metadata.partOfSample,
+      project_number:  metadata.projectNumber,
+      sample_number:   metadata.sampleNumber,
+      dive_site:       metadata.diveSite,
+      collector_name:  metadata.collectorName,
       collection_date: metadata.collectionDate || null,
-      latitude: metadata.latitude || null,
-      longitude: metadata.longitude || null,
+      latitude:        metadata.latitude || null,
+      longitude:       metadata.longitude || null,
       storage_location: metadata.storageLocation,
-      kingdom: metadata.kingdom,
-      genus: metadata.genus,
-      family: metadata.family,
-      species: metadata.species,
-      depth: metadata.depth || null,
-      temperature: metadata.temperature || null,
-      substrate: metadata.substrate,
-      sample_length: metadata.sampleLength || null,
+      kingdom:         metadata.kingdom,
+      genus:           metadata.genus,
+      family:          metadata.family,
+      species:         metadata.species,
+      depth:           metadata.depth || null,
+      temperature:     metadata.temperature || null,
+      substrate:       metadata.substrate,
+      sample_length:   metadata.sampleLength || null,
       morphology,
-      microbiology,
+      microbiology:    cleanedMicrobiology,
       molecular,
       publication
     };

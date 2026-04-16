@@ -115,20 +115,20 @@ function GettingStarted() {
 
       <Section title="How to log in">
         <Steps steps={[
-          { n:1, title:"Open the app", desc:"Navigate to the MEROBase URL in your browser." },
+          { n:1, title:"Open the app",      desc:"Navigate to the MEROBase URL in your browser." },
           { n:2, title:"Enter credentials", desc:"Use your username and password provided by your administrator." },
-          { n:3, title:"Access dashboard", desc:"After login you will land on the Dashboard showing key statistics and recent samples." },
+          { n:3, title:"Access dashboard",  desc:"After login you will land on the Dashboard showing key statistics and recent samples." },
         ]} />
       </Section>
 
       <Section title="Navigation">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
-            { icon:"📊", label:"Dashboard",   desc:"Overview of all samples, KPIs and recent activity." },
-            { icon:"➕", label:"Add Sample",   desc:"Multi-step wizard to register a new sample." },
-            { icon:"✏️", label:"Edit Sample",  desc:"Search and edit an existing sample." },
-            { icon:"🔍", label:"Search",       desc:"Search samples by ID, name, species, collector and more." },
-            { icon:"📖", label:"Manual",       desc:"This guide — how to use MEROBase and understand the ID system." },
+            { icon:"📊", label:"Dashboard",  desc:"Overview of all samples, KPIs and recent activity." },
+            { icon:"➕", label:"Add Sample",  desc:"Multi-step wizard to register a new sample." },
+            { icon:"✏️", label:"Edit Sample", desc:"Search and edit an existing sample." },
+            { icon:"🔍", label:"Search",      desc:"Search samples by ID, name, species, collector and more." },
+            { icon:"📖", label:"Manual",      desc:"This guide — how to use MEROBase and understand the ID system." },
           ].map(item => (
             <div key={item.label} className="flex items-start gap-3 bg-gray-50 rounded-xl p-4 border border-gray-100">
               <span className="text-xl">{item.icon}</span>
@@ -143,10 +143,10 @@ function GettingStarted() {
 
       <Section title="Quick start">
         <Steps steps={[
-          { n:1, title:"Add your first sample",    desc:'Click "Add Sample" in the sidebar. Fill in Step 1 — Metadata to generate your first Sample ID.' },
-          { n:2, title:"Complete the wizard",       desc:"Move through all steps — Morphology, Microbiology, Molecular, Publication — filling in what is available." },
-          { n:3, title:"Submit the sample",         desc:"Review all data in Step 6 and submit. The sample is now stored in the database." },
-          { n:4, title:"View sample details",       desc:"Find your sample via Search and click it to view the full sample details page with ID Trace." },
+          { n:1, title:"Add your first sample",  desc:'Click "Add Sample" in the sidebar. Fill in Step 1 — Metadata to generate your first Sample ID.' },
+          { n:2, title:"Complete the wizard",    desc:"Move through all steps — Morphology, Microbiology, Molecular, Publication — filling in what is available." },
+          { n:3, title:"Submit the sample",      desc:"Review all data in Step 6 and submit. The sample is now stored in the database." },
+          { n:4, title:"View sample details",    desc:"Find your sample via Search and click it to view the full sample details page with ID Trace." },
         ]} />
       </Section>
     </div>
@@ -157,6 +157,7 @@ function GettingStarted() {
 function IDSystem() {
   return (
     <div className="space-y-8">
+
       <Section title="Overview">
         <p className="text-gray-600 leading-relaxed">
           Every entry in MEROBase has a unique auto-generated ID. IDs follow a
@@ -166,6 +167,7 @@ function IDSystem() {
         </p>
       </Section>
 
+      {/* ================= SAMPLE ID ================= */}
       <Section title="Sample ID">
         <IDCard
           id="B.A.H.01.005"
@@ -181,7 +183,7 @@ function IDSystem() {
         <p className="text-sm text-gray-500 mt-4 mb-2 font-medium">Part of Sample codes:</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           {[
-            ["WB","Whole body"], ["H","Head"], ["B","Body"], ["T","Tail"],
+            ["WB","Whole body"], ["H","Head"],  ["B","Body"],  ["T","Tail"],
             ["G","Gill"], ["I","Intestines"], ["S","Stomach"], ["K","Kidney"],
             ["L","Liver"], ["FP","Filter Paper"], ["HRT","Heart"], ["E","Egg"],
             ["BNS","Bone"], ["M","Mucus"], ["TST","Tissue"],
@@ -194,6 +196,7 @@ function IDSystem() {
         </div>
       </Section>
 
+      {/* ================= MORPHOLOGY ID ================= */}
       <Section title="Morphology ID">
         <IDCard
           id="B.A.H.01.005.MOR"
@@ -206,6 +209,83 @@ function IDSystem() {
         <Note>Morphology is <strong>independent</strong> — it is not linked to the microbiology or molecular chain.</Note>
       </Section>
 
+      {/* ================= MICROBIOLOGY ================= */}
+      <Section title="Microbiology">
+        <p className="text-gray-600 leading-relaxed mb-6">
+          The microbiology chain is a three-level hierarchy. Each level extends
+          the ID of its parent — Primary Isolated → Isolated Morphology → Tests.
+        </p>
+
+        {/* ── Primary Isolated ID ── */}
+        <SubSection title="Primary Isolated ID">
+          <IDCard
+            id="B.A.H.01.005.FNG.NA.10-2.ISO-01"
+            color="purple"
+            parts={[
+              { code:"B.A.H.01.005", desc:"Parent sample ID" },
+              { code:"FNG",          desc:"Isolated type — FNG = Fungi, BCT = Bacteria" },
+              { code:"NA",           desc:"Agar media — NA = Nutrient Agar (AIA, ISP2, ISP4, SCA, NA, ZA)" },
+              { code:"10-2",         desc:"Dilution — 10-2 or 10-3" },
+              { code:"ISO-01",       desc:"Global counter — increments per sample regardless of type or agar" },
+            ]}
+          />
+        </SubSection>
+
+        {/* ── Isolated Morphology ID ── */}
+        <SubSection title="Isolated Morphology ID">
+          <IDCard
+            id="B.A.H.01.005.FNG.NA.10-2.ISO-01.ISOMOR"
+            color="purple"
+            parts={[
+              { code:"B.A.H.01.005.FNG.NA.10-2.ISO-01", desc:"Parent isolated ID" },
+              { code:"ISOMOR", desc:"Fixed suffix — no number, one ISOMOR per ISO entry" },
+            ]}
+          />
+          <Note>
+            <strong>Rule:</strong> Each Primary Isolated entry can only have one
+            Isolated Morphology entry. The system enforces this — once an ISO is
+            linked, it is blocked from being selected again in Step 3B.
+          </Note>
+        </SubSection>
+
+        {/* ── Microbiology Test IDs ── */}
+        <SubSection title="Microbiology Test IDs">
+          <p className="text-sm text-gray-600 mb-4">
+            Tests are linked directly to a Primary Isolated ID. Each test type
+            has its own unique code and an independent counter that resets per
+            linked ISO ID.
+          </p>
+          <div className="space-y-3 mb-4">
+            {[
+              { id:"...ISO-01.ABSY-01", label:"Antibacterial Assay", code:"ABSY" },
+              { id:"...ISO-01.AASY-01", label:"Antimalarial Assay",  code:"AASY" },
+              { id:"...ISO-01.BT-01",   label:"Biochemical Test",    code:"BT"   },
+              { id:"...ISO-01.EBT-01",  label:"Enzymatic Test",      code:"EBT"  },
+            ].map(item => (
+              <div key={item.code}
+                className="flex items-center justify-between bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+                <div>
+                  <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-0.5">
+                    {item.label}
+                  </p>
+                  <p className="font-mono text-sm text-amber-800 font-medium">{item.id}</p>
+                </div>
+                <span className="text-xs bg-amber-600 text-white px-2 py-1 rounded-full font-mono font-bold">
+                  {item.code}
+                </span>
+              </div>
+            ))}
+          </div>
+          <Note>
+            Example — if you run 2 antibacterial tests on ISO-01 and 1 on ISO-02:
+            <br/>• ISO-01.ABSY-01 → first test linked to ISO-01
+            <br/>• ISO-01.ABSY-02 → second test on same ISO-01
+            <br/>• ISO-02.ABSY-01 → counter resets because different linked ISO
+          </Note>
+        </SubSection>
+      </Section>
+
+      {/* ================= MOLECULAR ID ================= */}
       <Section title="Molecular ID">
         <IDCard
           id="B.A.H.01.005.MOL"
@@ -218,84 +298,42 @@ function IDSystem() {
         <Note>Molecular is <strong>independent</strong> — it is not linked to the microbiology or morphology chain.</Note>
       </Section>
 
-      <Section title="Primary Isolated ID">
-        <IDCard
-          id="B.A.H.01.005.FNG.NA.10-2.ISO-01"
-          color="purple"
-          parts={[
-            { code:"B.A.H.01.005", desc:"Parent sample ID" },
-            { code:"FNG",          desc:"Isolated type — FNG = Fungi, BCT = Bacteria" },
-            { code:"NA",           desc:"Agar media — NA = Nutrient Agar (AIA, ISP2, ISP4, SCA, NA, ZA)" },
-            { code:"10-2",         desc:"Dilution — 10-2 or 10-3" },
-            { code:"ISO-01",       desc:"Global counter — increments per sample regardless of type or agar" },
-          ]}
-        />
-      </Section>
-
-      <Section title="Isolated Morphology ID">
-        <IDCard
-          id="B.A.H.01.005.FNG.NA.10-2.ISO-01.ISOMOR"
-          color="purple"
-          parts={[
-            { code:"B.A.H.01.005.FNG.NA.10-2.ISO-01", desc:"Parent isolated ID" },
-            { code:"ISOMOR", desc:"Fixed suffix — no number, one ISOMOR per ISO entry" },
-          ]}
-        />
-        <Note><strong>Rule:</strong> Each Primary Isolated entry can only have one Isolated Morphology entry. The system enforces this — once an ISO is linked, it is blocked from being selected again.</Note>
-      </Section>
-
-      <Section title="Microbiology Test IDs">
-        <p className="text-sm text-gray-600 mb-4">
-          Tests can be linked to either a Primary Isolated ID or an Isolated Morphology ID — whichever is most appropriate for the experiment.
-          The counter is independent per test type and resets for each linked ID.
-        </p>
-        <div className="space-y-3">
-          {[
-            { id:"...ISO-01.ISOMOR.ABSY-01", label:"Antibacterial Assay", code:"ABSY", color:"amber" },
-            { id:"...ISO-01.ISOMOR.AASY-01", label:"Antimalarial Assay",  code:"AASY", color:"amber" },
-            { id:"...ISO-01.ISOMOR.BT-01",   label:"Biochemical Test",    code:"BT",   color:"amber" },
-            { id:"...ISO-01.ISOMOR.EBT-01",  label:"Enzymatic Test",      code:"EBT",  color:"amber" },
-          ].map(item => (
-            <div key={item.code} className="flex items-center justify-between bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
-              <div>
-                <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-0.5">{item.label}</p>
-                <p className="font-mono text-sm text-amber-800 font-medium">{item.id}</p>
-              </div>
-              <span className="text-xs bg-amber-600 text-white px-2 py-1 rounded-full font-mono font-bold">{item.code}</span>
-            </div>
-          ))}
-        </div>
-        <Note>
-          Example — if you run 2 antibacterial tests on ISOMOR-01 and 1 on ISO-01 directly:
-          <br/>• ISO-01.ISOMOR.ABSY-01 → first test on ISOMOR
-          <br/>• ISO-01.ISOMOR.ABSY-02 → second test on same ISOMOR
-          <br/>• ISO-01.ABSY-01 → counter resets because different linked ID
-        </Note>
-      </Section>
-
+      {/* ================= FULL HIERARCHY ================= */}
       <Section title="Full hierarchy example">
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 space-y-2 font-mono text-xs">
           {[
-            { indent:0, id:"B.A.H.01.005",                                    label:"Sample",              color:"#3B82F6" },
-            { indent:1, id:"B.A.H.01.005.MOR",                                label:"Morphology",           color:"#22C55E" },
-            { indent:1, id:"B.A.H.01.005.MOL",                                label:"Molecular",            color:"#22C55E" },
-            { indent:1, id:"B.A.H.01.005.FNG.NA.10-2.ISO-01",                 label:"Primary Isolated",     color:"#8B5CF6" },
-            { indent:2, id:"B.A.H.01.005.FNG.NA.10-2.ISO-01.ISOMOR",         label:"Isolated Morphology",  color:"#8B5CF6" },
-            { indent:3, id:"B.A.H.01.005.FNG.NA.10-2.ISO-01.ISOMOR.ABSY-01", label:"Antibacterial",        color:"#F59E0B" },
-            { indent:3, id:"B.A.H.01.005.FNG.NA.10-2.ISO-01.ISOMOR.AASY-01", label:"Antimalarial",         color:"#F59E0B" },
-            { indent:3, id:"B.A.H.01.005.FNG.NA.10-2.ISO-01.ISOMOR.BT-01",   label:"Biochemical",          color:"#F59E0B" },
-            { indent:1, id:"B.A.H.01.005.BCT.ISP2.10-3.ISO-02",               label:"Primary Isolated",     color:"#8B5CF6" },
-            { indent:2, id:"B.A.H.01.005.BCT.ISP2.10-3.ISO-02.ISOMOR",       label:"Isolated Morphology",  color:"#8B5CF6" },
+            { indent:0, id:"B.A.H.01.005",                              label:"Sample",             color:"#3B82F6" },
+            { indent:1, id:"B.A.H.01.005.MOR",                          label:"Morphology",          color:"#22C55E" },
+            { indent:1, id:"B.A.H.01.005.MOL",                          label:"Molecular",           color:"#22C55E" },
+            { indent:1, id:"Microbiology",                               label:"",                    color:"#6B7280", italic:true },
+            { indent:2, id:"B.A.H.01.005.FNG.NA.10-2.ISO-01",           label:"Primary Isolated",    color:"#8B5CF6" },
+            { indent:3, id:"B.A.H.01.005.FNG.NA.10-2.ISO-01.ISOMOR",   label:"Isolated Morphology", color:"#8B5CF6" },
+            { indent:3, id:"B.A.H.01.005.FNG.NA.10-2.ISO-01.ABSY-01",  label:"Antibacterial",       color:"#F59E0B" },
+            { indent:3, id:"B.A.H.01.005.FNG.NA.10-2.ISO-01.AASY-01",  label:"Antimalarial",        color:"#F59E0B" },
+            { indent:3, id:"B.A.H.01.005.FNG.NA.10-2.ISO-01.BT-01",    label:"Biochemical",         color:"#F59E0B" },
+            { indent:3, id:"B.A.H.01.005.FNG.NA.10-2.ISO-01.EBT-01",   label:"Enzymatic",           color:"#F59E0B" },
+            { indent:2, id:"B.A.H.01.005.BCT.ISP2.10-3.ISO-02",         label:"Primary Isolated",    color:"#8B5CF6" },
+            { indent:3, id:"B.A.H.01.005.BCT.ISP2.10-3.ISO-02.ISOMOR", label:"Isolated Morphology", color:"#8B5CF6" },
+            { indent:3, id:"B.A.H.01.005.BCT.ISP2.10-3.ISO-02.ABSY-01",label:"Antibacterial",       color:"#F59E0B" },
           ].map((row, i) => (
             <div key={i} style={{ paddingLeft: row.indent * 20 }}
               className="flex items-center gap-3">
-              {row.indent > 0 && <span className="text-gray-300">└─</span>}
-              <span style={{ color: row.color }} className="font-semibold">{row.id}</span>
-              <span className="text-gray-400 text-xs normal-case font-sans">— {row.label}</span>
+              {row.indent > 0 && !row.italic && (
+                <span className="text-gray-300">└─</span>
+              )}
+              <span
+                style={{ color: row.color, fontStyle: row.italic ? "italic" : "normal" }}
+                className="font-semibold">
+                {row.id}
+              </span>
+              {row.label && (
+                <span className="text-gray-400 text-xs normal-case font-sans">— {row.label}</span>
+              )}
             </div>
           ))}
         </div>
       </Section>
+
     </div>
   );
 }
@@ -315,14 +353,14 @@ function AddSample() {
       <Section title="The wizard steps">
         <div className="space-y-3">
           {[
-            { step:"Step 1", title:"Metadata",             desc:"Fill in the core sample information — sample type, project, part of sample, collection site, collector name, GPS coordinates, taxonomy and storage. The Sample ID is generated automatically as you fill in the required fields." },
-            { step:"Step 2", title:"Morphology",           desc:"Upload SEM and microscope photos and add morphology notes. A Morphology ID (B.A.H.01.005.MOR) is generated automatically and is independent of the microbiology chain." },
-            { step:"Step 3A", title:"Primary Isolated",    desc:"Add one or more isolated entries. Select isolated type (Fungi or Bacteria), agar media and dilution. Each entry gets a unique ISO ID." },
-            { step:"Step 3B", title:"Isolated Morphology", desc:"Link each Primary Isolated entry to one Isolated Morphology entry. The rule is strict — one ISO can only have one ISOMOR. The system blocks duplicate links automatically." },
-            { step:"Step 3C", title:"Microbiology Tests",  desc:"Run antibacterial, antimalarial, biochemical and enzymatic tests. Link each test run to either an ISO or ISOMOR entry. Counters reset per linked ID." },
-            { step:"Step 4",  title:"Molecular Analysis",  desc:"Record DNA extraction, PCR, sequencing and bioinformatics metadata. Upload gel images and raw sequence files. A Molecular ID is generated automatically and is independent." },
-            { step:"Step 5",  title:"Publication",         desc:"Add publication links, DOI references and notes related to this sample." },
-            { step:"Step 6",  title:"Review & Submit",     desc:"Review all entered data across all steps before final submission. Once submitted the sample is stored in the database and gets a permanent record." },
+            { step:"Step 1",  title:"Metadata",             desc:"Fill in the core sample information — sample type, project, part of sample, collection site, collector name, GPS coordinates, taxonomy and storage. The Sample ID is generated automatically as you fill in the required fields." },
+            { step:"Step 2",  title:"Morphology",           desc:"Upload SEM and microscope photos and add morphology notes. A Morphology ID (B.A.H.01.005.MOR) is generated automatically and is independent of the microbiology chain." },
+            { step:"Step 3A", title:"Primary Isolated",     desc:"Add one or more isolated entries. Select isolated type (Fungi or Bacteria), agar media and dilution. Each entry gets a unique ISO ID." },
+            { step:"Step 3B", title:"Isolated Morphology",  desc:"Link each Primary Isolated entry to one Isolated Morphology entry. The rule is strict — one ISO can only have one ISOMOR. The system blocks duplicate links automatically." },
+            { step:"Step 3C", title:"Microbiology Tests",   desc:"Run antibacterial, antimalarial, biochemical and enzymatic tests. Each test run is linked to a Primary Isolated (ISO) entry. Counters reset per linked ISO ID." },
+            { step:"Step 4",  title:"Molecular Analysis",   desc:"Record DNA extraction, PCR, sequencing and bioinformatics metadata. Upload gel images and raw sequence files. A Molecular ID is generated automatically and is independent." },
+            { step:"Step 5",  title:"Publication",          desc:"Add publication links, DOI references and notes related to this sample." },
+            { step:"Step 6",  title:"Review & Submit",      desc:"Review all entered data across all steps before final submission. Once submitted the sample is stored in the database and gets a permanent record." },
           ].map(item => (
             <div key={item.step} className="flex gap-4 bg-gray-50 border border-gray-100 rounded-xl p-4">
               <div className="flex-shrink-0">
@@ -345,7 +383,7 @@ function AddSample() {
             "The Sample ID is generated automatically — you cannot type it manually.",
             "All five fields in Step 1 are required to generate a Sample ID: Sample Type, Project Type, Part of Sample, Project Number and Sample Number.",
             "1 Primary Isolated entry = 1 Isolated Morphology entry. You cannot link the same ISO to two different ISOMOR entries.",
-            "Test runs in Step 3C must be linked to either an ISO or ISOMOR ID to generate a test ID.",
+            "Test runs in Step 3C are linked to a Primary Isolated (ISO) ID — not ISOMOR.",
             "Morphology (MOR) and Molecular (MOL) IDs are independent and do not connect to the microbiology chain.",
             "Starting a new Add Sample session always clears the previous draft.",
           ].map((rule, i) => (
@@ -374,12 +412,12 @@ function SampleDetails() {
       <Section title="The six tabs">
         <div className="space-y-3">
           {[
-            { tab:"Metadata",          desc:"Core sample information — collection details, taxonomy, GPS location and storage." },
-            { tab:"Microbiology",      desc:"Three sub-tabs: Primary Isolated (ISO entries), Isolated Morphology (ISOMOR entries with macroscopic/colony/microscopic data), and Microbiology Tests (ABSY/AASY/BT/EBT results)." },
-            { tab:"Morphology",        desc:"SEM and microscope images and morphology notes." },
-            { tab:"Molecular",         desc:"DNA extraction metadata, PCR details, sequencing results and marker-specific data." },
-            { tab:"Publication",       desc:"Links, DOI references and publication notes." },
-            { tab:"ID Trace",          desc:"Interactive mind map showing the full ID hierarchy of this sample. Pan, zoom and click nodes to explore the lineage." },
+            { tab:"Metadata",     desc:"Core sample information — collection details, taxonomy, GPS location and storage." },
+            { tab:"Microbiology", desc:"Three sub-tabs: Primary Isolated (ISO entries), Isolated Morphology (ISOMOR entries with macroscopic/colony/microscopic data), and Microbiology Tests (ABSY/AASY/BT/EBT results)." },
+            { tab:"Morphology",   desc:"SEM and microscope images and morphology notes." },
+            { tab:"Molecular",    desc:"DNA extraction metadata, PCR details, sequencing results and marker-specific data." },
+            { tab:"Publication",  desc:"Links, DOI references and publication notes." },
+            { tab:"ID Trace",     desc:"Interactive mind map showing the full ID hierarchy of this sample. Pan, zoom and click nodes to explore the lineage." },
           ].map(item => (
             <div key={item.tab} className="flex gap-4 bg-gray-50 border border-gray-100 rounded-xl p-4">
               <div className="flex-shrink-0">
@@ -395,13 +433,13 @@ function SampleDetails() {
 
       <Section title="Using the ID Trace mind map">
         <Steps steps={[
-          { n:1, title:"Open ID Trace tab",    desc:"Click the ID Trace tab on any Sample Details page." },
-          { n:2, title:"Explore the tree",     desc:"The full ID hierarchy is shown as a horizontal tree — Sample on the left, tests on the right." },
-          { n:3, title:"Click a card",         desc:"Click any node card to select it and highlight its full chain from root to that node. Everything else dims." },
-          { n:4, title:"Expand or collapse",   desc:"Click the +/− button on any node to show or hide its children. This does not affect the selection." },
-          { n:5, title:"Pan the canvas",       desc:"Click and drag on the empty canvas background to pan around." },
-          { n:6, title:"Zoom",                 desc:"Scroll the mouse wheel to zoom in and out, centered on your cursor position. Use the + and − buttons or Reset to control zoom." },
-          { n:7, title:"View full ID",         desc:"The right side panel shows the full ID, details and chain breadcrumb of the selected node. Click any pill in the chain to jump to that node." },
+          { n:1, title:"Open ID Trace tab",  desc:"Click the ID Trace tab on any Sample Details page." },
+          { n:2, title:"Explore the tree",   desc:"The full ID hierarchy is shown as a horizontal tree — Sample on the left, tests on the right." },
+          { n:3, title:"Click a card",       desc:"Click any node card to select it and highlight its full chain from root to that node. Everything else dims." },
+          { n:4, title:"Expand or collapse", desc:"Click the +/− button on any node to show or hide its children. This does not affect the selection." },
+          { n:5, title:"Pan the canvas",     desc:"Click and drag on the empty canvas background to pan around." },
+          { n:6, title:"Zoom",               desc:"Scroll the mouse wheel to zoom in and out, centered on your cursor position. Use the + and − buttons or Reset to control zoom." },
+          { n:7, title:"View full ID",       desc:"The right side panel shows the full ID, details and chain breadcrumb of the selected node. Click any pill in the chain to jump to that node." },
         ]} />
       </Section>
 
@@ -430,19 +468,19 @@ function FAQ() {
     },
     {
       q: "What is the difference between Morphology and Isolated Morphology?",
-      a: "Morphology (Step 2) is the overall physical description of the sample itself — photos and notes. Isolated Morphology (Step 3B) is the morphology of a specific isolated microorganism (colony characteristics, gram reaction etc.)."
+      a: "Morphology (Step 2) is the overall physical description of the sample itself — photos and notes. Isolated Morphology (Step 3B) is the morphology of a specific isolated microorganism — colony characteristics, gram reaction and so on."
     },
     {
-      q: "Can I link a test to a Primary Isolated ID instead of an Isolated Morphology ID?",
-      a: "Yes. In Step 3C the link selector shows both ISO and ISOMOR entries grouped separately. You can freely choose either. The test ID will be generated based on whichever you select."
+      q: "What do I link tests to in Step 3C?",
+      a: "Tests are linked to a Primary Isolated (ISO) ID. The selector in Step 3C shows all available ISO entries. The test ID is generated automatically based on the linked ISO."
     },
     {
       q: "Why does the test counter reset?",
-      a: "Test counters are independent per linked ID. If you link two tests to ISOMOR-01 they get ABSY-01 and ABSY-02. If you then link a test to ISO-01 directly the counter starts at ABSY-01 again because it's a different linked ID."
+      a: "Test counters are independent per linked ISO ID. If you link two antibacterial tests to ISO-01 they get ABSY-01 and ABSY-02. If you then link a test to ISO-02 the counter starts at ABSY-01 again because it is a different linked ISO."
     },
     {
       q: "What are MOR and MOL IDs?",
-      a: "B.A.H.01.005.MOR is the Morphology ID and B.A.H.01.005.MOL is the Molecular ID. Both are auto-generated and are completely independent — they do not connect to the microbiology chain."
+      a: "B.A.H.01.005.MOR is the Morphology ID and B.A.H.01.005.MOL is the Molecular ID. Both are auto-generated and completely independent — they do not connect to the microbiology chain."
     },
     {
       q: "Can I delete a sample?",
@@ -454,7 +492,7 @@ function FAQ() {
     },
     {
       q: "How do I read the ID Trace mind map?",
-      a: "The tree reads left to right — Sample ID is the root on the left, and branches extend right through Isolated → ISOMOR → Tests. Click any node to see its full ID in the right panel and highlight its chain."
+      a: "The tree reads left to right — Sample ID is the root on the left, branches extend through Microbiology → Primary Isolated → Tests on the right. Each ISO card also shows its ISOMOR status. Click any node to see its full ID in the right panel."
     },
   ];
 
@@ -499,6 +537,20 @@ function Section({ title, children }) {
   );
 }
 
+function SubSection({ title, children }) {
+  return (
+    <div className="mb-6">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-1 h-4 bg-purple-400 rounded-full flex-shrink-0" />
+        <h3 className="text-sm font-semibold text-gray-700">{title}</h3>
+      </div>
+      <div className="pl-4 border-l-2 border-purple-100 space-y-3">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function Steps({ steps }) {
   return (
     <div className="space-y-3">
@@ -519,10 +571,10 @@ function Steps({ steps }) {
 
 function IDCard({ id, color, parts }) {
   const colors = {
-    blue:   { bg:"bg-blue-50",   border:"border-blue-200",   id:"text-blue-700",   dot:"bg-blue-500" },
-    green:  { bg:"bg-green-50",  border:"border-green-200",  id:"text-green-700",  dot:"bg-green-500" },
-    purple: { bg:"bg-purple-50", border:"border-purple-200", id:"text-purple-700", dot:"bg-purple-500" },
-    amber:  { bg:"bg-amber-50",  border:"border-amber-200",  id:"text-amber-700",  dot:"bg-amber-500" },
+    blue:   { bg:"bg-blue-50",   border:"border-blue-200",   id:"text-blue-700"   },
+    green:  { bg:"bg-green-50",  border:"border-green-200",  id:"text-green-700"  },
+    purple: { bg:"bg-purple-50", border:"border-purple-200", id:"text-purple-700" },
+    amber:  { bg:"bg-amber-50",  border:"border-amber-200",  id:"text-amber-700"  },
   }[color];
 
   return (

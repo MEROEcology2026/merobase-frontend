@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { samplesAPI } from "../services/api";
 import { useSampleFormContext } from "../context/SampleFormContext";
+import { toastSuccess, toastError } from "../utils/toast";
 
 import MetadataTab from "./SampleDetails/MetadataTab";
 import MorphologyTab from "./SampleDetails/MorphologyTab";
@@ -70,10 +71,11 @@ export default function SampleDetails() {
     if (!confirm("Are you sure you want to delete this sample?")) return;
     try {
       await samplesAPI.delete(sample.sample_id);
-      navigate("/searchsample");
+      toastSuccess("Sample deleted successfully.");
+      setTimeout(() => navigate("/searchsample"), 1200);
     } catch (err) {
       console.error("Failed to delete sample:", err);
-      alert("Failed to delete sample. Please try again.");
+      toastError("Failed to delete sample. Please try again.");
     }
   };
 
@@ -180,7 +182,6 @@ export default function SampleDetails() {
             onClick={() => navigate("/editsample")} />
           <SidebarBtn icon={<Search />} label="Search" open={sidebarOpen}
             onClick={() => navigate("/searchsample")} />
-          {/* ✅ ADDED */}
           <SidebarBtn icon={<BookOpen />} label="Manual" open={sidebarOpen}
             onClick={() => navigate("/manual")} />
         </nav>

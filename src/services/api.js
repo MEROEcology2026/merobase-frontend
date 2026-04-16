@@ -9,8 +9,62 @@ const api = axios.create({
   },
 });
 
+/* ================= TOAST HELPER ================= */
+// Creates a small toast in the bottom center of the screen
+const showSessionToast = () => {
+  // Don't show duplicate toasts
+  if (document.getElementById("merobase-session-toast")) return;
+
+  const toast = document.createElement("div");
+  toast.id = "merobase-session-toast";
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1E293B;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-family: sans-serif;
+    font-weight: 500;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: merobaseSlideUp 0.3s ease;
+  `;
+
+  const style = document.createElement("style");
+  style.textContent = `
+    @keyframes merobaseSlideUp {
+      from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+      to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+  `;
+  document.head.appendChild(style);
+
+  toast.innerHTML = `
+    <span style="font-size:18px">🔒</span>
+    <span>Your session has expired — please log in again</span>
+  `;
+
+  document.body.appendChild(toast);
+
+  /* auto remove after 2.5s then redirect */
+  setTimeout(() => {
+    toast.style.transition = "opacity 0.3s ease";
+    toast.style.opacity = "0";
+    setTimeout(() => {
+      toast.remove();
+      style.remove();
+    }, 300);
+  }, 2500);
+};
+
 /* ================= REQUEST INTERCEPTOR ================= */
-// Automatically attach token to every request
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("merobase_token");
@@ -23,14 +77,18 @@ api.interceptors.request.use(
 );
 
 /* ================= RESPONSE INTERCEPTOR ================= */
-// Automatically handle 401 (token expired)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem("merobase_token");
       localStorage.removeItem("merobase_user");
-      window.location.href = "/";
+
+      /* ✅ Show toast first, then redirect after 2.8s */
+      showSessionToast();
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 2800);
     }
     return Promise.reject(error);
   }

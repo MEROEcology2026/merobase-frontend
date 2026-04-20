@@ -8,10 +8,15 @@ import {
 import {
   LayoutDashboard, PlusCircle, Edit3, Search, ChevronLeft, LogOut, BookOpen,
 } from "lucide-react";
-import { samplesAPI } from "../services/api";
+import { samplesAPI, authAPI } from "../services/api";
 import { useSampleFormContext } from "../context/SampleFormContext";
 
 const COLORS = ["#2563EB","#10B981","#F59E0B","#8B5CF6","#EC4899","#6366F1","#9CA3AF"];
+
+const ROLE_COLORS = {
+  admin: { bg:"bg-blue-100",  text:"text-blue-700",  dot:"bg-blue-500",  label:"Admin" },
+  user:  { bg:"bg-green-100", text:"text-green-700", dot:"bg-green-500", label:"User"  },
+};
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -19,6 +24,10 @@ export default function Dashboard() {
   const [samples, setSamples] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [activeUsers, setActiveUsers] = useState([]);
+
+  /* ── current user from localStorage ── */
+  const currentUser = JSON.parse(localStorage.getItem("merobase_user") || "{}");
 
   useEffect(() => {
     const fetchSamples = async () => {
@@ -35,16 +44,31 @@ export default function Dashboard() {
     fetchSamples();
   }, []);
 
+  /* ✅ Fetch active users — refresh every 30 seconds */
+  useEffect(() => {
+    const fetchActiveUsers = async () => {
+      try {
+        const res = await authAPI.getActiveUsers();
+        setActiveUsers(res.data.data || []);
+      } catch (err) {
+        console.error("Failed to load active users:", err);
+      }
+    };
+    fetchActiveUsers();
+    const interval = setInterval(fetchActiveUsers, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem("merobase_token");
     localStorage.removeItem("merobase_user");
     navigate("/");
   };
 
-  const totalSamples = samples.length;
+  const totalSamples  = samples.length;
   const totalProjects = new Set(samples.map((s) => s.project_type).filter(Boolean)).size;
   const totalKingdoms = new Set(samples.map((s) => s.kingdom).filter(Boolean)).size;
-  const totalSpecies = new Set(samples.map((s) => s.species).filter(Boolean)).size;
+  const totalSpecies  = new Set(samples.map((s) => s.species).filter(Boolean)).size;
 
   const latestRegistered = useMemo(() => {
     return [...samples]
@@ -107,10 +131,30 @@ export default function Dashboard() {
             onClick={() => navigate("/editsample")} />
           <NavItem icon={<Search />} label="Search Sample" open={sidebarOpen}
             onClick={() => navigate("/searchsample")} />
-          {/* ✅ ADDED */}
           <NavItem icon={<BookOpen />} label="Manual" open={sidebarOpen}
             onClick={() => navigate("/manual")} />
         </nav>
+
+        {/* ── current user badge ── */}
+        {sidebarOpen && (
+          <div className="px-4 py-3 border-t border-b">
+            <p className="text-xs text-gray-400 mb-1">Logged in as</p>
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+                {currentUser.username?.[0]?.toUpperCase() || "?"}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-700">{currentUser.username}</p>
+                <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium
+                  ${currentUser.role === "admin"
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-green-100 text-green-700"}`}>
+                  {currentUser.role}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="p-2 border-t">
           <NavItem icon={<LogOut className="text-red-500" />} label="Logout"
@@ -130,16 +174,71 @@ export default function Dashboard() {
           <>
             {/* KPI */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-              <KPI title="Total Samples" value={totalSamples} />
+              <KPI title="Total Samples"  value={totalSamples} />
               <KPI title="Total Projects" value={totalProjects} />
               <KPI title="Total Kingdoms" value={totalKingdoms} />
-              <KPI title="Total Species" value={totalSpecies} />
+              <KPI title="Total Species"  value={totalSpecies} />
             </div>
 
-            {/* Latest */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            {/* Latest + Active Users */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               <InfoCard title="Latest Registered" sample={latestRegistered} />
-              <InfoCard title="Latest Edited" sample={latestEdited} />
+              <InfoCard title="Latest Edited"     sample={latestEdited} />
+
+              {/* ✅ ACTIVE USERS WIDGET */}
+              <div className="bg-white rounded-xl shadow p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Active Users</h3>
+                  <span className={`text-xs px-2 py-1 rounded-full font-semibold ${
+                    activeUsers.length > 0
+                      ? "bg-green-100 text-green-700"
+                      : "bg-gray-100 text-gray-500"
+                  }`}>
+                    {activeUsers.length} online
+                  </span>
+                </div>
+
+                {activeUsers.length === 0 ? (
+                  <p className="text-sm text-gray-400 italic">No active users right now</p>
+                ) : (
+                  <div className="space-y-3">
+                    {activeUsers.map((u) => {
+                      const rc = ROLE_COLORS[u.role] || ROLE_COLORS.user;
+                      const isMe = u.username === currentUser.username;
+                      const lastSeen = u.last_active_at
+                        ? new Date(u.last_active_at).toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" })
+                        : "—";
+                      return (
+                        <div key={u.id} className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {/* green pulse dot */}
+                            <div className="relative">
+                              <div className={`w-2 h-2 rounded-full ${rc.dot}`} />
+                              <div className={`absolute inset-0 w-2 h-2 rounded-full ${rc.dot} animate-ping opacity-60`} />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-700">
+                                {u.username}
+                                {isMe && (
+                                  <span className="ml-1.5 text-xs text-gray-400">(you)</span>
+                                )}
+                              </p>
+                              <p className="text-xs text-gray-400">Last seen {lastSeen}</p>
+                            </div>
+                          </div>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${rc.bg} ${rc.text}`}>
+                            {rc.label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <p className="text-xs text-gray-300 mt-4">
+                  Refreshes every 30 seconds · Active = last 15 min
+                </p>
+              </div>
             </div>
 
             {/* Charts */}
@@ -197,7 +296,7 @@ export default function Dashboard() {
               </ChartBox>
             </div>
 
-            {/* ================= SYSTEM STATUS ================= */}
+            {/* System Status */}
             <div className="mt-8">
               <h2 className="text-lg font-semibold mb-4">System Status</h2>
               <StatusPanel />
@@ -224,63 +323,55 @@ function StatusPanel() {
       "You can log in with your username and password",
       "Pages are protected — no one can access without logging in",
       "You can log out from the sidebar",
+      "User roles are enforced — admin can delete, user1/user2 can only add and edit",
     ]},
     { group: "Managing Samples", items: [
       "You can add new samples through the step-by-step form — form always starts blank",
-      "Sample ID is auto-generated from Sample Type, Project Type, Project Number and Sample Number",
+      "Sample ID is auto-generated from Sample Type, Project Type, Part of Sample, Project Number and Sample Number",
       "You can search and filter samples by kingdom, project, type, date and sample ID",
       "You can edit any existing sample from Edit Sample, Search, and Sample Details pages",
-      "You can delete samples you no longer need",
+      "Admin can delete samples — user1 and user2 cannot",
       "Sample details page shows all information in one place",
     ]},
-    { group: "Primary Isolated", items: [
-      "Supports multiple isolated entries per sample",
-      "Each entry has an Isolated Type — Fungi (FNG) or Bacteria (BCT)",
-      "Isolated ID is auto-generated per entry — e.g. B.A.H.01.005.FNG.NA.10-2.ISO-01",
-      "Each entry has its own storage fields and notes",
-    ]},
-    { group: "Microbiology Tests", items: [
-      "Antibacterial, Antimalarial, Biochemical and Enzymatic tests all supported",
-      "Each test run can be linked to either an ISO or ISOMOR entry",
-      "Test ID is auto-generated per linked ID — e.g. ...ISOMOR.ABSY-01",
-      "Counters reset per linked ID group",
-    ]},
-    { group: "Adding Sample Details", items: [
-      "You can upload SEM and microscope photos",
-      "Molecular data supports multiple marker genes",
-      "Publication links can be added",
+    { group: "Microbiology", items: [
+      "Supports multiple Primary Isolated entries per sample",
+      "Each ISO entry has its own Isolated Morphology (1 ISO = 1 ISOMOR enforced)",
+      "Antibacterial, Antimalarial, Biochemical and Enzymatic tests linked to ISO directly",
+      "Test IDs auto-generated per linked ISO — counters reset per ISO",
     ]},
     { group: "Dashboard", items: [
       "Shows total number of samples, projects, kingdoms, and species",
       "Charts show breakdown by kingdom, project type, and collection date",
       "Shows the most recently added and recently edited sample",
+      "Active users widget shows who is online right now (last 15 minutes)",
     ]},
   ];
 
   const todo = [
     { group: "Coming Soon", items: [
-      "Export your sample list to Excel or PDF",
-      "See all collection locations on a single map",
-      "Different user levels — admin can edit, viewer can only read",
-      "Sample photos stored properly on the server instead of inside the database",
-      "Batch import — upload a CSV to register multiple samples at once",
+      "Export sample list to Excel or PDF",
+      "Collection locations on a single map",
+      "Image uploads — Cloudinary/S3 storage (under evaluation)",
+      "Batch import via CSV",
+      "Activity log — who created or edited what and when",
     ]},
   ];
 
   const bugs = [
     { group: "Things to be aware of", items: [
       "Login session lasts 7 days — after that you will need to log in again",
-      "Collection dates might show one day earlier than expected due to timezone differences",
-      "Always use the Add Sample button in the sidebar to start a new sample — avoids form state conflicts",
+      "Collection dates might show one day earlier due to timezone differences",
+      "Always use the Add Sample button in the sidebar to start a new sample",
+      "Image uploads are disabled for now — do not attempt to upload photos",
     ]},
   ];
 
   const content = { working, todo, bugs };
 
   const tabStyles = {
-    working: { active: "bg-green-100 text-green-700 border-transparent", dot: "bg-green-500" },
-    todo:    { active: "bg-yellow-100 text-yellow-700 border-transparent", dot: "bg-yellow-500" },
-    bugs:    { active: "bg-red-100 text-red-700 border-transparent", dot: "bg-red-500" },
+    working: { active:"bg-green-100 text-green-700 border-transparent", dot:"bg-green-500" },
+    todo:    { active:"bg-yellow-100 text-yellow-700 border-transparent", dot:"bg-yellow-500" },
+    bugs:    { active:"bg-red-100 text-red-700 border-transparent", dot:"bg-red-500" },
   };
 
   return (
@@ -297,7 +388,6 @@ function StatusPanel() {
           </button>
         ))}
       </div>
-
       <div className="space-y-6">
         {content[activeTab].map((group) => (
           <div key={group.group}>

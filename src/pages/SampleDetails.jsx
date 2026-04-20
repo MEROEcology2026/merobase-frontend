@@ -27,9 +27,9 @@ const TABS = [
 ];
 
 const MICRO_SUBTABS = [
-  { id: "isolated",   label: "Primary Isolated" },
-  { id: "isomorpho",  label: "Isolated Morphology" },
-  { id: "tests",      label: "Microbiology Tests" },
+  { id: "isolated",  label: "Primary Isolated" },
+  { id: "isomorpho", label: "Isolated Morphology" },
+  { id: "tests",     label: "Microbiology Tests" },
 ];
 
 export default function SampleDetails() {
@@ -42,6 +42,10 @@ export default function SampleDetails() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("metadata");
   const [activeMicroTab, setActiveMicroTab] = useState("isolated");
+
+  /* ✅ Get current user role from localStorage */
+  const currentUser = JSON.parse(localStorage.getItem("merobase_user") || "{}");
+  const isAdmin = currentUser.role === "admin";
 
   /* ================= LOAD FROM API ================= */
   useEffect(() => {
@@ -84,32 +88,32 @@ export default function SampleDetails() {
     if (!sample) return;
     loadSampleForEdit({
       metadata: {
-        sampleId: sample.sample_id,
-        sampleName: sample.sample_name,
-        sampleType: sample.sample_type,
-        partOfSample: sample.part_of_sample,
-        projectType: sample.project_type,
-        projectNumber: sample.project_number,
-        sampleNumber: sample.sample_number,
-        diveSite: sample.dive_site,
-        collectorName: sample.collector_name,
+        sampleId:       sample.sample_id,
+        sampleName:     sample.sample_name,
+        sampleType:     sample.sample_type,
+        partOfSample:   sample.part_of_sample,
+        projectType:    sample.project_type,
+        projectNumber:  sample.project_number,
+        sampleNumber:   sample.sample_number,
+        diveSite:       sample.dive_site,
+        collectorName:  sample.collector_name,
         collectionDate: sample.collection_date?.split("T")[0] || "",
-        latitude: sample.latitude,
-        longitude: sample.longitude,
+        latitude:       sample.latitude,
+        longitude:      sample.longitude,
         storageLocation: sample.storage_location,
-        kingdom: sample.kingdom,
-        genus: sample.genus,
-        family: sample.family,
-        species: sample.species,
-        depth: sample.depth,
-        temperature: sample.temperature,
-        substrate: sample.substrate,
-        sampleLength: sample.sample_length,
+        kingdom:        sample.kingdom,
+        genus:          sample.genus,
+        family:         sample.family,
+        species:        sample.species,
+        depth:          sample.depth,
+        temperature:    sample.temperature,
+        substrate:      sample.substrate,
+        sampleLength:   sample.sample_length,
       },
-      morphology: sample.morphology || {},
+      morphology:   sample.morphology   || {},
       microbiology: sample.microbiology || {},
-      molecular: sample.molecular || {},
-      publication: sample.publication || { links: [] },
+      molecular:    sample.molecular    || {},
+      publication:  sample.publication  || { links: [] },
     });
     navigate("/add/step1", { state: { fromEdit: true } });
   };
@@ -137,27 +141,27 @@ export default function SampleDetails() {
 
   /* ================= MAP API RESPONSE ================= */
   const metadata = {
-    sampleId: sample.sample_id,
-    sampleName: sample.sample_name,
-    sampleType: sample.sample_type,
-    partOfSample: sample.part_of_sample,
-    projectType: sample.project_type,
-    projectNumber: sample.project_number,
-    sampleNumber: sample.sample_number,
-    diveSite: sample.dive_site,
-    collectorName: sample.collector_name,
-    collectionDate: sample.collection_date?.split("T")[0] || "",
-    latitude: sample.latitude,
-    longitude: sample.longitude,
+    sampleId:        sample.sample_id,
+    sampleName:      sample.sample_name,
+    sampleType:      sample.sample_type,
+    partOfSample:    sample.part_of_sample,
+    projectType:     sample.project_type,
+    projectNumber:   sample.project_number,
+    sampleNumber:    sample.sample_number,
+    diveSite:        sample.dive_site,
+    collectorName:   sample.collector_name,
+    collectionDate:  sample.collection_date?.split("T")[0] || "",
+    latitude:        sample.latitude,
+    longitude:       sample.longitude,
     storageLocation: sample.storage_location,
-    kingdom: sample.kingdom,
-    genus: sample.genus,
-    family: sample.family,
-    species: sample.species,
-    depth: sample.depth,
-    temperature: sample.temperature,
-    substrate: sample.substrate,
-    sampleLength: sample.sample_length,
+    kingdom:         sample.kingdom,
+    genus:           sample.genus,
+    family:          sample.family,
+    species:         sample.species,
+    depth:           sample.depth,
+    temperature:     sample.temperature,
+    substrate:       sample.substrate,
+    sampleLength:    sample.sample_length,
   };
 
   const isolatedRuns = sample.microbiology?.primaryIsolatedRuns || [];
@@ -202,10 +206,13 @@ export default function SampleDetails() {
             <ArrowLeft size={14} /> Back
           </button>
           <div className="flex items-center gap-3">
-            <button onClick={handleDelete}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition">
-              <Trash2 size={14} /> Delete
-            </button>
+            {/* ✅ Only admin sees Delete button */}
+            {isAdmin && (
+              <button onClick={handleDelete}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition">
+                <Trash2 size={14} /> Delete
+              </button>
+            )}
             <button onClick={handleEdit}
               className="px-4 py-2 bg-yellow-500 text-white rounded-lg text-sm hover:bg-yellow-600 transition">
               Edit Sample
@@ -259,10 +266,12 @@ export default function SampleDetails() {
 
           {/* KPI strip */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-gray-100 rounded-xl overflow-hidden border border-gray-100">
-            <KPI label="Depth" value={sample.depth ? `${sample.depth} m` : "—"} />
-            <KPI label="Temperature" value={sample.temperature ? `${sample.temperature}°C` : "—"} />
-            <KPI label="Sample length" value={sample.sample_length ? `${sample.sample_length} cm` : "—"} />
-            <KPI label="Isolated entries" value={isolatedRuns.length > 0 ? `${isolatedRuns.length} ${isolatedRuns.length === 1 ? "entry" : "entries"}` : "None"} />
+            <KPI label="Depth"           value={sample.depth        ? `${sample.depth} m`          : "—"} />
+            <KPI label="Temperature"     value={sample.temperature  ? `${sample.temperature}°C`    : "—"} />
+            <KPI label="Sample length"   value={sample.sample_length? `${sample.sample_length} cm` : "—"} />
+            <KPI label="Isolated entries" value={isolatedRuns.length > 0
+              ? `${isolatedRuns.length} ${isolatedRuns.length === 1 ? "entry" : "entries"}`
+              : "None"} />
           </div>
         </div>
 

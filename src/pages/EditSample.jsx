@@ -31,6 +31,10 @@ export default function EditSample() {
     { startDate: null, endDate: null, key: "selection" }
   ]);
 
+  /* ✅ Get current user role */
+  const currentUser = JSON.parse(localStorage.getItem("merobase_user") || "{}");
+  const isAdmin = currentUser.role === "admin";
+
   /* ================= LOAD FROM API ================= */
   useEffect(() => {
     const fetchSamples = async () => {
@@ -110,27 +114,27 @@ export default function EditSample() {
 
       loadSampleForEdit({
         metadata: {
-          sampleId:       full.sample_id,
-          sampleName:     full.sample_name,
-          sampleType:     full.sample_type,
-          partOfSample:   full.part_of_sample,
-          projectType:    full.project_type,
-          projectNumber:  full.project_number,
-          sampleNumber:   full.sample_number,
-          diveSite:       full.dive_site,
-          collectorName:  full.collector_name,
-          collectionDate: full.collection_date?.split("T")[0] || "",
-          latitude:       full.latitude,
-          longitude:      full.longitude,
+          sampleId:        full.sample_id,
+          sampleName:      full.sample_name,
+          sampleType:      full.sample_type,
+          partOfSample:    full.part_of_sample,
+          projectType:     full.project_type,
+          projectNumber:   full.project_number,
+          sampleNumber:    full.sample_number,
+          diveSite:        full.dive_site,
+          collectorName:   full.collector_name,
+          collectionDate:  full.collection_date?.split("T")[0] || "",
+          latitude:        full.latitude,
+          longitude:       full.longitude,
           storageLocation: full.storage_location,
-          kingdom:        full.kingdom,
-          genus:          full.genus,
-          family:         full.family,
-          species:        full.species,
-          depth:          full.depth,
-          temperature:    full.temperature,
-          substrate:      full.substrate,
-          sampleLength:   full.sample_length,
+          kingdom:         full.kingdom,
+          genus:           full.genus,
+          family:          full.family,
+          species:         full.species,
+          depth:           full.depth,
+          temperature:     full.temperature,
+          substrate:       full.substrate,
+          sampleLength:    full.sample_length,
         },
         morphology:   full.morphology   || {},
         microbiology: full.microbiology || {},
@@ -145,7 +149,6 @@ export default function EditSample() {
     }
   };
 
-  /* ✅ UPDATED: toast instead of alert */
   const handleDelete = async (sampleId) => {
     if (!confirm("Are you sure you want to delete this sample?")) return;
     try {
@@ -290,10 +293,13 @@ export default function EditSample() {
                       className="flex-1 px-3 py-2 text-sm bg-yellow-500 text-white rounded">
                       Edit
                     </button>
-                    <button onClick={() => handleDelete(sample.sample_id)}
-                      className="px-3 py-2 text-sm bg-red-500 text-white rounded">
-                      <Trash2 size={14} />
-                    </button>
+                    {/* ✅ Only admin sees Delete button */}
+                    {isAdmin && (
+                      <button onClick={() => handleDelete(sample.sample_id)}
+                        className="px-3 py-2 text-sm bg-red-500 text-white rounded">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))

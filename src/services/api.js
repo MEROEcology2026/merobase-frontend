@@ -10,9 +10,7 @@ const api = axios.create({
 });
 
 /* ================= TOAST HELPER ================= */
-// Creates a small toast in the bottom center of the screen
 const showSessionToast = () => {
-  // Don't show duplicate toasts
   if (document.getElementById("merobase-session-toast")) return;
 
   const toast = document.createElement("div");
@@ -53,7 +51,6 @@ const showSessionToast = () => {
 
   document.body.appendChild(toast);
 
-  /* auto remove after 2.5s then redirect */
   setTimeout(() => {
     toast.style.transition = "opacity 0.3s ease";
     toast.style.opacity = "0";
@@ -83,8 +80,6 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem("merobase_token");
       localStorage.removeItem("merobase_user");
-
-      /* ✅ Show toast first, then redirect after 2.8s */
       showSessionToast();
       setTimeout(() => {
         window.location.href = "/";
@@ -96,19 +91,20 @@ api.interceptors.response.use(
 
 /* ================= AUTH ================= */
 export const authAPI = {
-  login: (credentials) => api.post("/api/auth/login", credentials),
-  register: (credentials) => api.post("/api/auth/register", credentials),
-  getMe: () => api.get("/api/auth/me"),
+  login:          (credentials) => api.post("/api/auth/login", credentials),
+  register:       (credentials) => api.post("/api/auth/register", credentials),
+  getMe:          ()             => api.get("/api/auth/me"),
+  getActiveUsers: ()             => api.get("/api/auth/active-users"), // ✅ NEW
 };
 
 /* ================= SAMPLES ================= */
 export const samplesAPI = {
-  getAll: () => api.get("/api/samples"),
-  getById: (id) => api.get(`/api/samples/${id}`),
-  search: (params) => api.get("/api/samples/search", { params }),
-  create: (data) => api.post("/api/samples", data),
-  update: (id, data) => api.put(`/api/samples/${id}`, data),
-  delete: (id) => api.delete(`/api/samples/${id}`),
+  getAll:   ()           => api.get("/api/samples"),
+  getById:  (id)         => api.get(`/api/samples/${id}`),
+  search:   (params)     => api.get("/api/samples/search", { params }),
+  create:   (data)       => api.post("/api/samples", data),
+  update:   (id, data)   => api.put(`/api/samples/${id}`, data),
+  delete:   (id)         => api.delete(`/api/samples/${id}`),
 };
 
 /* ================= UPLOAD ================= */

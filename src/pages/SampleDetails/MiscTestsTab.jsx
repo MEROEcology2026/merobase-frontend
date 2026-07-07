@@ -84,6 +84,8 @@ export default function MiscTestsTab({ misc }) {
       {misc?.molecularIdentification?.hasIdentification && (
         <Section title="Molecular Identification">
           <div className="bg-white border border-gray-100 rounded-xl p-5">
+            {/* ✅ Show linked ISO + generated MOLID */}
+            <TestIdBadge run={misc.molecularIdentification} label="MOLID" />
             <div className="space-y-3">
               <Row label="Species name"            value={misc.molecularIdentification?.speciesName} />
               <Row label="PCR platform"            value={misc.molecularIdentification?.pcrPlatform} />

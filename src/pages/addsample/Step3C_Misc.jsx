@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, Plus, X, Trash2, Link } from "lucide-react";
 import {
   generateAntibacterialId, generateAntimalarialId,
   generateBiochemicalId, generateEnzymaticId,
+  generateMolecularTestId,
   getNextAntibacterialIndex, getNextAntimalarialIndex,
   getNextBiochemicalIndex, getNextEnzymaticIndex,
   regenIds,
@@ -456,41 +457,100 @@ export default function Step3C_Misc() {
         <Select
           label="Has the sample been molecularly identified?"
           value={molecular.hasIdentification ? "Yes" : "No"}
-          onChange={(e) => updateMicroTests({
-            molecularIdentification: { ...molecular, hasIdentification: e.target.value === "Yes" }
-          })}
+          onChange={(e) => {
+            const isYes = e.target.value === "Yes";
+            updateMicroTests({
+              molecularIdentification: isYes
+                ? { ...molecular, hasIdentification: true }
+                : { ...molecular, hasIdentification: false, linkedId: "", testId: "" }
+            });
+          }}
           options={["No", "Yes"]} />
+
         {molecular.hasIdentification && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <Input label="Species Name" value={molecular.speciesName || ""}
-              onChange={(e) => updateMicroTests({ molecularIdentification: { ...molecular, speciesName: e.target.value } })} />
-            <Select label="PCR Platform" value={molecular.pcrPlatform || ""}
-              onChange={(e) => updateMicroTests({ molecularIdentification: { ...molecular, pcrPlatform: e.target.value } })}
-              options={["", "Conventional PCR", "qPCR", "RT-PCR"]} />
-            <Select label="PCR Protocol Type" value={molecular.pcrProtocolType || ""}
-              onChange={(e) => updateMicroTests({ molecularIdentification: { ...molecular, pcrProtocolType: e.target.value } })}
-              options={["", "Standard", "Touchdown", "Nested"]} />
-            <Select label="Sequencing Method" value={molecular.sequencingMethod || ""}
-              onChange={(e) => updateMicroTests({ molecularIdentification: { ...molecular, sequencingMethod: e.target.value } })}
-              options={["", "Sanger", "NGS", "MinION"]} />
-            <Select label="Bioinformatics Pipeline" value={molecular.bioinformaticsPipeline || ""}
-              onChange={(e) => updateMicroTests({ molecularIdentification: { ...molecular, bioinformaticsPipeline: e.target.value } })}
-              options={["", "QIIME", "Mothur", "Custom"]} />
-            <Select label="Accession / Submission" value={molecular.accessionStatus || "Unpublished"}
-              onChange={(e) => updateMicroTests({ molecularIdentification: { ...molecular, accessionStatus: e.target.value } })}
-              options={["Unpublished", "Published"]} />
-            {molecular.accessionStatus === "Published" && (
-              <Input label="Accession Number" value={molecular.accessionNumber || ""}
-                onChange={(e) => updateMicroTests({ molecularIdentification: { ...molecular, accessionNumber: e.target.value } })} />
-            )}
-            <div className="md:col-span-2">
-              <FileDropzone
-                multiple={false}
-                accept=".fastq,.fq,.ab1,.txt,.fasta,.fa"
-                existing={molecular.rawSequenceFile ? [molecular.rawSequenceFile] : []}
-                onFiles={(files) => updateMicroTests({ molecularIdentification: { ...molecular, rawSequenceFile: files?.[0] || null } })} />
+          <>
+            {/* ✅ REQUIRED ISO LINK SELECTOR */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Link size={14} className="text-blue-600" />
+                <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">
+                  Link to Primary Isolated <span className="text-red-500">*</span>
+                </p>
+              </div>
+              {linkOptions.length === 0 ? (
+                <p className="text-xs text-yellow-600 bg-yellow-50 rounded px-3 py-2">
+                  No primary isolated entries found — go to Step 3A first.
+                </p>
+              ) : (
+                <select
+                  value={molecular.linkedId || ""}
+                  onChange={(e) => {
+                    const linkedId = e.target.value;
+                    updateMicroTests({
+                      molecularIdentification: {
+                        ...molecular,
+                        linkedId,
+                        testId: generateMolecularTestId(linkedId),
+                      }
+                    });
+                  }}
+                  className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none">
+                  <option value="">— Select Primary Isolated ID —</option>
+                  {linkOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              )}
+              {molecular.testId && (
+                <div className="mt-2">
+                  <p className="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-1">
+                    Auto-generated Molecular ID:
+                  </p>
+                  <p className="text-sm font-bold font-mono text-blue-700 break-all">{molecular.testId}</p>
+                </div>
+              )}
             </div>
-          </div>
+
+            {/* Fields only appear once an ISO is linked (enforces required) */}
+            {molecular.linkedId ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <Input label="Species Name" value={molecular.speciesName || ""}
+                  onChange={(e) => updateMicroTests({ molecularIdentification: { ...molecular, speciesName: e.target.value } })} />
+                <Select label="PCR Platform" value={molecular.pcrPlatform || ""}
+                  onChange={(e) => updateMicroTests({ molecularIdentification: { ...molecular, pcrPlatform: e.target.value } })}
+                  options={["", "Conventional PCR", "qPCR", "RT-PCR"]} />
+                <Select label="PCR Protocol Type" value={molecular.pcrProtocolType || ""}
+                  onChange={(e) => updateMicroTests({ molecularIdentification: { ...molecular, pcrProtocolType: e.target.value } })}
+                  options={["", "Standard", "Touchdown", "Nested"]} />
+                <Select label="Sequencing Method" value={molecular.sequencingMethod || ""}
+                  onChange={(e) => updateMicroTests({ molecularIdentification: { ...molecular, sequencingMethod: e.target.value } })}
+                  options={["", "Sanger", "NGS", "MinION"]} />
+                <Select label="Bioinformatics Pipeline" value={molecular.bioinformaticsPipeline || ""}
+                  onChange={(e) => updateMicroTests({ molecularIdentification: { ...molecular, bioinformaticsPipeline: e.target.value } })}
+                  options={["", "QIIME", "Mothur", "Custom"]} />
+                <Select label="Accession / Submission" value={molecular.accessionStatus || "Unpublished"}
+                  onChange={(e) => updateMicroTests({ molecularIdentification: { ...molecular, accessionStatus: e.target.value } })}
+                  options={["Unpublished", "Published"]} />
+                {molecular.accessionStatus === "Published" && (
+                  <Input label="Accession Number" value={molecular.accessionNumber || ""}
+                    onChange={(e) => updateMicroTests({ molecularIdentification: { ...molecular, accessionNumber: e.target.value } })} />
+                )}
+                <div className="md:col-span-2">
+                  <FileDropzone
+                    multiple={false}
+                    accept=".fastq,.fq,.ab1,.txt,.fasta,.fa"
+                    existing={molecular.rawSequenceFile ? [molecular.rawSequenceFile] : []}
+                    onFiles={(files) => updateMicroTests({ molecularIdentification: { ...molecular, rawSequenceFile: files?.[0] || null } })} />
+                </div>
+              </div>
+            ) : (
+              linkOptions.length > 0 && (
+                <p className="text-xs text-yellow-600 bg-yellow-50 rounded px-3 py-2 mt-3">
+                  Select a Primary Isolated ID above to continue.
+                </p>
+              )
+            )}
+          </>
         )}
       </CollapsibleBox>
     </div>

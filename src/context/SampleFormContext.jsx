@@ -47,6 +47,8 @@ const initial = {
       testNotes: "",
       molecularIdentification: {
         hasIdentification: false,
+        linkedId: "",
+        testId: "",
         speciesName: "",
         pcrPlatform: "",
         pcrProtocolType: "",
@@ -96,6 +98,9 @@ const cleanMicrobiology = (microbiology) => {
   const primaryIsolatedRuns = (microbiology.primaryIsolatedRuns || [])
     .filter(r => r.isolatedId && r.isolatedId.trim() !== "");
 
+  /* ✅ Set of valid ISO IDs that still exist — used to validate links */
+  const validIsoIds = new Set(primaryIsolatedRuns.map(r => r.isolatedId));
+
   /* ── Isolated Morphology — must have isoMorId ── */
   const isolatedMorphologyRuns = (microbiology.isolatedMorphologyRuns || [])
     .filter(r => r.isoMorId && r.isoMorId.trim() !== "");
@@ -115,6 +120,21 @@ const cleanMicrobiology = (microbiology) => {
   const enzymaticRuns = (tests.enzymaticRuns || [])
     .filter(r => r.linkedId && r.testId);
 
+  /* ✅ Molecular Identification — clear orphaned ISO link */
+  let molecularIdentification = tests.molecularIdentification || {};
+  if (
+    molecularIdentification.hasIdentification &&
+    molecularIdentification.linkedId &&
+    !validIsoIds.has(molecularIdentification.linkedId)
+  ) {
+    // The linked ISO was deleted — drop the stale link + generated ID
+    molecularIdentification = {
+      ...molecularIdentification,
+      linkedId: "",
+      testId: "",
+    };
+  }
+
   return {
     ...microbiology,
     primaryIsolatedRuns,
@@ -125,6 +145,7 @@ const cleanMicrobiology = (microbiology) => {
       antimalarialRuns,
       biochemicalRuns,
       enzymaticRuns,
+      molecularIdentification,
     }
   };
 };

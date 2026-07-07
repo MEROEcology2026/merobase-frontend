@@ -26,6 +26,7 @@ function buildTree(sample) {
   const aasy = t.antimalarialRuns  || [];
   const bt   = t.biochemicalRuns   || [];
   const ebt  = t.enzymaticRuns     || [];
+  const molId = t.molecularIdentification || {};   // ✅ NEW
 
   const isoChildren = iso.map(r => {
     const isoId       = r.isolatedId || `iso-${Math.random()}`;
@@ -46,6 +47,11 @@ function buildTree(sample) {
       ...ebt .filter(x => x.linkedId === isoId && x.testId)
         .map(x => ({ id:x.testId, label:"Enzymatic",     level:3,
                      desc:(x.checked||[]).slice(0,2).join(", ")||"—", children:[] })),
+      /* ✅ molecular identification — 1 per sample, linked to one ISO */
+      ...(molId.hasIdentification && molId.linkedId === isoId && molId.testId
+        ? [{ id:molId.testId, label:"Molecular ID", level:3,
+             desc:molId.speciesName||"—", children:[] }]
+        : []),
     ];
 
     return {

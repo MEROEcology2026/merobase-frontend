@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, PlusCircle, Edit3,
-  Search as SearchIcon, ChevronRight, Calendar, LogOut, Trash2, BookOpen
+  Search as SearchIcon, ChevronRight, Calendar, LogOut, BookOpen
 } from "lucide-react";
 import { DateRange } from "react-date-range";
 import { useSampleFormContext } from "../context/SampleFormContext";
@@ -11,6 +11,18 @@ import { toastSuccess, toastError } from "../utils/toast";
 
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
+
+/* ================= KINGDOM ACCENT (left-edge tick) ================= */
+const KINGDOM_TINT = {
+  Animalia:  "#0E7490",
+  Plantae:   "#15803D",
+  Fungi:     "#B45309",
+  Bacteria:  "#7C3AED",
+  Protista:  "#BE185D",
+  Chromista: "#0891B2",
+  Undecided: "#9CA3AF",
+};
+const kingdomTint = (k) => KINGDOM_TINT[k] || "#9CA3AF";
 
 export default function EditSample() {
   const navigate = useNavigate();
@@ -31,7 +43,7 @@ export default function EditSample() {
     { startDate: null, endDate: null, key: "selection" }
   ]);
 
-  /* ✅ Get current user role */
+  /* Current user role */
   const currentUser = JSON.parse(localStorage.getItem("merobase_user") || "{}");
   const isAdmin = currentUser.role === "admin";
 
@@ -74,7 +86,6 @@ export default function EditSample() {
     () => [...new Set(samples.map(s => s.kingdom).filter(Boolean))],
     [samples]
   );
-
   const projectTypes = useMemo(
     () => [...new Set(samples.map(s => s.project_type).filter(Boolean))],
     [samples]
@@ -87,7 +98,8 @@ export default function EditSample() {
 
       const searchable = [
         sample.sample_name, sample.species, sample.collector_name,
-        sample.dive_site, sample.kingdom, sample.project_type, sample.sample_id
+        sample.dive_site, sample.kingdom, sample.project_type, sample.sample_id,
+        sample.identified_species
       ].filter(Boolean).join(" ").toLowerCase();
 
       const matchesQuery   = searchable.includes(query.toLowerCase());
@@ -104,6 +116,15 @@ export default function EditSample() {
       return matchesQuery && matchesKingdom && matchesProject && matchesType && matchesDate;
     });
   }, [samples, query, kingdom, projectType, sampleType, range]);
+
+  const activeFilters =
+    (kingdom ? 1 : 0) + (projectType ? 1 : 0) + (sampleType ? 1 : 0) +
+    (range[0].startDate && range[0].endDate ? 1 : 0);
+
+  const clearAll = () => {
+    setQuery(""); setKingdom(""); setProjectType(""); setSampleType("");
+    setRange([{ startDate: null, endDate: null, key: "selection" }]);
+  };
 
   /* ================= ACTIONS ================= */
   const handleEdit = async (sample) => {
@@ -166,15 +187,14 @@ export default function EditSample() {
     navigate("/dashboard");
   };
 
-  /* ================= UI ================= */
   return (
-    <div className="flex min-h-screen bg-gray-100 font-sans">
+    <div className="flex min-h-screen bg-[#FAFAF9] font-sans">
       {/* ================= SIDEBAR ================= */}
-      <aside className={`bg-white shadow-xl transition-all duration-300 ${sidebarOpen ? "w-64" : "w-16"} flex flex-col h-screen sticky top-0`}>
-        <div className="flex items-center justify-between p-4 border-b">
-          {sidebarOpen && <h1 className="text-xl font-bold text-gray-700">MEROBase</h1>}
+      <aside className={`bg-white border-r border-stone-200 transition-all duration-300 ${sidebarOpen ? "w-64" : "w-16"} flex flex-col h-screen sticky top-0`}>
+        <div className="flex items-center justify-between p-4 border-b border-stone-200">
+          {sidebarOpen && <h1 className="text-xl font-bold text-stone-700">MEROBase</h1>}
           <button onClick={() => setSidebarOpen(!sidebarOpen)}>
-            <ChevronRight className={`text-gray-600 transition-transform ${sidebarOpen ? "rotate-180" : ""}`} />
+            <ChevronRight className={`text-stone-500 transition-transform ${sidebarOpen ? "rotate-180" : ""}`} />
           </button>
         </div>
 
@@ -191,7 +211,7 @@ export default function EditSample() {
             open={sidebarOpen} onClick={() => navigate("/manual")} />
         </nav>
 
-        <div className="p-2 border-t">
+        <div className="p-2 border-t border-stone-200">
           <SidebarButton icon={<LogOut className="text-red-500" />} label="Logout"
             open={sidebarOpen} onClick={handleLogout} />
         </div>
@@ -199,125 +219,228 @@ export default function EditSample() {
 
       {/* ================= MAIN ================= */}
       <main className="flex-1 p-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Edit Samples</h1>
+        {/* ── header ── */}
+        <div className="flex items-baseline justify-between mb-1">
+          <div className="flex items-baseline gap-3">
+            <h1 className="text-2xl font-bold text-stone-900 tracking-tight">Edit Specimens</h1>
+            <span className="text-sm text-stone-400 font-mono">
+              {loading ? "…" : `${filteredSamples.length} of ${samples.length}`}
+            </span>
+          </div>
           <button onClick={handleCancel}
-            className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 text-sm">
+            className="text-sm px-3 py-1.5 rounded-lg border border-stone-300 text-stone-600 hover:bg-stone-100 transition">
             Cancel
           </button>
         </div>
+        <p className="text-sm text-stone-500 mb-6">Select a specimen to edit or remove.</p>
 
-        {/* ================= FILTER PANEL ================= */}
-        <div className="bg-white rounded-xl shadow p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="relative">
-              <SearchIcon size={18} className="absolute left-3 top-3 text-gray-400" />
-              <input type="text" placeholder="Search by any keyword..."
-                value={query} onChange={e => setQuery(e.target.value)}
-                className="pl-10 w-full border rounded-lg px-3 py-2" />
-            </div>
+        {/* ================= FILTER TOOLBAR ================= */}
+        <div className="bg-white border border-stone-200 rounded-xl px-3 py-2.5 mb-6
+                        flex flex-wrap items-center gap-2">
+          <div className="relative flex-1 min-w-[200px]">
+            <SearchIcon size={16} className="absolute left-3 top-2.5 text-stone-400" />
+            <input type="text" placeholder="Search name, species, collector, site, ID…"
+              value={query} onChange={e => setQuery(e.target.value)}
+              className="pl-9 w-full text-sm bg-transparent border-none focus:ring-0 focus:outline-none placeholder:text-stone-400" />
+          </div>
 
-            <select value={kingdom} onChange={e => setKingdom(e.target.value)}
-              className="border rounded-lg px-3 py-2">
-              <option value="">All Kingdoms</option>
-              {kingdoms.map(k => <option key={k} value={k}>{k}</option>)}
-            </select>
+          <div className="h-5 w-px bg-stone-200 hidden md:block" />
 
-            <select value={projectType} onChange={e => setProjectType(e.target.value)}
-              className="border rounded-lg px-3 py-2">
-              <option value="">All Projects</option>
-              {projectTypes.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
+          <FilterSelect value={kingdom} onChange={setKingdom} placeholder="All kingdoms" options={kingdoms} />
+          <FilterSelect value={projectType} onChange={setProjectType} placeholder="All projects" options={projectTypes} />
+          <FilterSelect value={sampleType} onChange={setSampleType} placeholder="All types"
+            options={["Biological", "Non-Biological"]} />
 
-            <select value={sampleType} onChange={e => setSampleType(e.target.value)}
-              className="border rounded-lg px-3 py-2">
-              <option value="">All Sample Types</option>
-              <option value="Biological">Biological</option>
-              <option value="Non-Biological">Non-Biological</option>
-            </select>
-
-            <div ref={pickerRef} className="relative md:col-span-2">
-              <label className="text-sm font-semibold flex items-center gap-1 mb-1">
-                <Calendar size={14} /> Collection Date
-              </label>
-              <div className="flex gap-2">
-                <button onClick={() => setShowPicker(!showPicker)}
-                  className="flex-1 px-4 py-2 border rounded-lg text-left bg-white text-sm">
-                  {range[0].startDate && range[0].endDate
-                    ? `${range[0].startDate.toLocaleDateString()} – ${range[0].endDate.toLocaleDateString()}`
-                    : "Select date range"}
-                </button>
+          <div ref={pickerRef} className="relative">
+            <button onClick={() => setShowPicker(!showPicker)}
+              className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition
+                ${range[0].startDate
+                  ? "border-cyan-300 bg-cyan-50 text-cyan-800"
+                  : "border-stone-200 text-stone-600 hover:bg-stone-50"}`}>
+              <Calendar size={14} />
+              {range[0].startDate && range[0].endDate
+                ? `${range[0].startDate.toLocaleDateString()} – ${range[0].endDate.toLocaleDateString()}`
+                : "Date"}
+            </button>
+            {showPicker && (
+              <div className="absolute right-0 z-50 mt-2 bg-white rounded-xl shadow-lg border border-stone-200 overflow-hidden">
+                <DateRange ranges={range} onChange={(item) => setRange([item.selection])} />
                 {range[0].startDate && (
                   <button onClick={() => setRange([{ startDate: null, endDate: null, key: "selection" }])}
-                    className="px-3 py-2 text-sm bg-gray-200 rounded-lg hover:bg-gray-300">
-                    Clear
+                    className="w-full text-xs text-stone-500 hover:text-stone-800 py-2 border-t border-stone-100">
+                    Clear dates
                   </button>
                 )}
               </div>
-              {showPicker && (
-                <div className="absolute z-50 mt-2">
-                  <DateRange ranges={range} onChange={(item) => setRange([item.selection])} />
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* ================= SAMPLE CARDS ================= */}
-        {loading ? (
-          <p className="text-gray-400 italic">Loading samples...</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {filteredSamples.length === 0 ? (
-              <p className="text-gray-500 italic col-span-full">No samples found.</p>
-            ) : (
-              filteredSamples.map(sample => (
-                <div key={sample.sample_id}
-                  className="bg-white rounded-xl shadow p-5 hover:shadow-lg transition">
-                  <p className="text-xs font-mono text-blue-600 mb-1">{sample.sample_id}</p>
-                  <h3 className="text-lg font-semibold mb-2">
-                    {sample.sample_name || "Unnamed Sample"}
-                  </h3>
-                  <div className="text-sm text-gray-600 space-y-1">
-                    <p>Project: {sample.project_type || "—"}</p>
-                    <p>Kingdom: {sample.kingdom || "—"}</p>
-                    <p>Sample Type: {sample.sample_type || "—"}</p>
-                    <p>Date: {sample.collection_date?.split("T")[0] || "—"}</p>
-                  </div>
-                  <div className="flex gap-3 mt-4">
-                    <button onClick={() => navigate(`/sampledetails/${sample.sample_id}`)}
-                      className="flex-1 px-3 py-2 text-sm bg-blue-600 text-white rounded">
-                      Details
-                    </button>
-                    <button onClick={() => handleEdit(sample)}
-                      className="flex-1 px-3 py-2 text-sm bg-yellow-500 text-white rounded">
-                      Edit
-                    </button>
-                    {/* ✅ Only admin sees Delete button */}
-                    {isAdmin && (
-                      <button onClick={() => handleDelete(sample.sample_id)}
-                        className="px-3 py-2 text-sm bg-red-500 text-white rounded">
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))
             )}
           </div>
-        )}
+
+          {(query || activeFilters > 0) && (
+            <button onClick={clearAll}
+              className="text-xs text-stone-400 hover:text-stone-700 px-2 py-1 transition">
+              Clear all
+            </button>
+          )}
+        </div>
+
+        {/* ================= SPECIMEN TABLE ================= */}
+        <SpecimenTable
+          loading={loading}
+          rows={filteredSamples}
+          isAdmin={isAdmin}
+          onDetails={(s) => navigate(`/sampledetails/${s.sample_id}`)}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
       </main>
     </div>
   );
 }
 
+/* ================= SPECIMEN TABLE ================= */
+function SpecimenTable({ loading, rows, onDetails, onEdit, onDelete, isAdmin }) {
+  if (loading) {
+    return (
+      <div className="bg-white border border-stone-200 rounded-xl p-12 text-center text-stone-400 text-sm">
+        Loading specimens…
+      </div>
+    );
+  }
+  if (rows.length === 0) {
+    return (
+      <div className="bg-white border border-dashed border-stone-300 rounded-xl p-12 text-center">
+        <p className="text-stone-500 text-sm mb-1">No specimens match your search.</p>
+        <p className="text-stone-400 text-xs">Try clearing a filter or widening the date range.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
+      <div className="hidden md:grid grid-cols-[190px_1fr_180px_120px_auto] gap-4 px-5 py-2.5
+                      border-b border-stone-200 bg-stone-50/70">
+        <ColHead>Catalogue №</ColHead>
+        <ColHead>Specimen</ColHead>
+        <ColHead>Origin</ColHead>
+        <ColHead>Logged</ColHead>
+        <ColHead>{""}</ColHead>
+      </div>
+
+      <div className="divide-y divide-stone-100">
+        {rows.map((s) => (
+          <SpecimenRow key={s.sample_id} s={s}
+            onDetails={onDetails} onEdit={onEdit}
+            onDelete={onDelete} isAdmin={isAdmin} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ColHead({ children }) {
+  return (
+    <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">
+      {children}
+    </span>
+  );
+}
+
+/* ================= SPECIMEN ROW ================= */
+function SpecimenRow({ s, onDetails, onEdit, onDelete, isAdmin }) {
+  const tint = kingdomTint(s.kingdom);
+  const logged = s.collection_date
+    ? new Date(s.collection_date).toLocaleDateString("en-GB",
+        { day: "2-digit", month: "short", year: "numeric" })
+    : "—";
+  const origin = [s.kingdom, s.dive_site].filter(Boolean).join(" · ") || "—";
+
+  return (
+    <div className="group relative grid grid-cols-1 md:grid-cols-[190px_1fr_180px_120px_auto]
+                    gap-2 md:gap-4 px-5 py-3.5 md:items-center hover:bg-stone-50/70 transition">
+      <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r"
+        style={{ background: tint }} />
+
+      {/* catalogue number */}
+      <div className="pl-2">
+        <span className="font-mono text-[13px] text-cyan-800 font-medium break-all">
+          {s.sample_id}
+        </span>
+        {s.sample_type && (
+          <span className="md:hidden ml-2 text-[10px] text-stone-400 uppercase tracking-wide">
+            {s.sample_type}
+          </span>
+        )}
+      </div>
+
+      {/* specimen — name + italic-serif species */}
+      <div className="pl-2 md:pl-0 min-w-0">
+        <p className="text-[15px] font-semibold text-stone-900 leading-snug truncate">
+          {s.sample_name || "Unnamed specimen"}
+        </p>
+        {s.identified_species ? (
+          <p className="text-[13px] text-stone-600 leading-snug truncate"
+             style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontStyle: "italic" }}>
+            {s.identified_species}
+          </p>
+        ) : (
+          <p className="text-[12px] text-stone-300 italic leading-snug">Not yet identified</p>
+        )}
+      </div>
+
+      {/* origin */}
+      <div className="pl-2 md:pl-0 text-[13px] text-stone-600 truncate">
+        <span className="md:hidden text-stone-400 mr-1">Origin:</span>{origin}
+      </div>
+
+      {/* logged date */}
+      <div className="pl-2 md:pl-0 text-[13px] text-stone-500 font-mono">
+        <span className="md:hidden text-stone-400 mr-1 font-sans">Logged:</span>{logged}
+      </div>
+
+      {/* actions */}
+      <div className="pl-2 md:pl-0 flex items-center gap-2 md:justify-end pt-1 md:pt-0">
+        <button onClick={() => onDetails(s)}
+          className="text-xs font-medium px-3 py-1.5 rounded-lg bg-cyan-700 text-white hover:bg-cyan-800 transition">
+          Details
+        </button>
+        <button onClick={() => onEdit(s)}
+          className="text-xs font-medium px-3 py-1.5 rounded-lg border border-stone-300 text-stone-700 hover:bg-stone-100 transition">
+          Edit
+        </button>
+        {isAdmin && onDelete && (
+          <button onClick={() => onDelete(s.sample_id)}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition">
+            Delete
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ================= FILTER SELECT ================= */
+function FilterSelect({ value, onChange, placeholder, options }) {
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)}
+      className={`text-sm px-2.5 py-1.5 rounded-lg border bg-white transition cursor-pointer
+        focus:ring-2 focus:ring-cyan-200 focus:outline-none
+        ${value ? "border-cyan-300 text-cyan-800 bg-cyan-50" : "border-stone-200 text-stone-600"}`}>
+      <option value="">{placeholder}</option>
+      {options.map((o) => <option key={o} value={o}>{o}</option>)}
+    </select>
+  );
+}
+
+/* ================= SIDEBAR BUTTON ================= */
 function SidebarButton({ icon, label, open, onClick, active }) {
   return (
     <button onClick={onClick}
-      className={`flex items-center gap-3 w-full px-4 py-3 rounded-lg transition
-        ${active ? "bg-yellow-50" : "hover:bg-gray-100"}`}>
+      className={`flex items-center gap-3 w-full px-4 py-3 transition border-l-2
+        ${active
+          ? "bg-yellow-50 border-yellow-500"
+          : "border-transparent hover:bg-stone-50"}`}>
       {icon}
-      {open && <span className="text-gray-700">{label}</span>}
+      {open && <span className="text-stone-700 text-sm">{label}</span>}
     </button>
   );
 }

@@ -104,7 +104,8 @@ export const generateEnzymaticId = (linkedId, index) => {
 
 /* ================= MOLECULAR IDENTIFICATION ID (ISO-linked) ================= */
 // Format: B.A.H.01.005.FNG.NA.10-2.ISO-01.MOLID
-// ✅ NO number — 1 molecular identification per sample, 1:1 with linked ISO
+// ✅ NO number — 1 molecular identification per isolate, 1:1 with linked ISO
+//    (a sample can have many isolates → many molecular runs, but each ISO gets one MOLID)
 // NOTE: distinct from generateMolecularId (.MOL, independent, Step 4)
 export const generateMolecularTestId = (linkedId) => {
   if (!linkedId) return "";

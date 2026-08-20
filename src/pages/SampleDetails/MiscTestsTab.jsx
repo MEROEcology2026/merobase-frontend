@@ -4,7 +4,16 @@ export default function MiscTestsTab({ misc }) {
   const antibacterialRuns = misc?.antibacterialRuns || [];
   const antimalarialRuns  = misc?.antimalarialRuns  || [];
   const biochemicalRuns   = misc?.biochemicalRuns   || [];
-  const enzymaticRuns     = misc?.enzymaticRuns     || [];
+  const enzymaticRuns      = misc?.enzymaticRuns     || [];
+
+  /* ✅ Normalize molecular shape — supports both new (array) and old (single object).
+     New: misc.molecularIdentificationRuns = [ { linkedId, testId, speciesName, ... } ]
+     Old: misc.molecularIdentification = { hasIdentification, linkedId, testId, ... } */
+  const molecularRuns = Array.isArray(misc?.molecularIdentificationRuns)
+    ? misc.molecularIdentificationRuns
+    : (misc?.molecularIdentification?.hasIdentification
+        ? [misc.molecularIdentification]
+        : []);
 
   return (
     <div className="space-y-6">
@@ -80,21 +89,28 @@ export default function MiscTestsTab({ misc }) {
         )}
       </Section>
 
-      {/* ================= MOLECULAR IDENTIFICATION ================= */}
-      {misc?.molecularIdentification?.hasIdentification && (
+      {/* ================= MOLECULAR IDENTIFICATION (MULTI-RUN) ================= */}
+      {molecularRuns.length > 0 && (
         <Section title="Molecular Identification">
-          <div className="bg-white border border-gray-100 rounded-xl p-5">
-            {/* ✅ Show linked ISO + generated MOLID */}
-            <TestIdBadge run={misc.molecularIdentification} label="MOLID" />
-            <div className="space-y-3">
-              <Row label="Species name"            value={misc.molecularIdentification?.speciesName} />
-              <Row label="PCR platform"            value={misc.molecularIdentification?.pcrPlatform} />
-              <Row label="PCR protocol"            value={misc.molecularIdentification?.pcrProtocolType} />
-              <Row label="Sequencing method"       value={misc.molecularIdentification?.sequencingMethod} />
-              <Row label="Bioinformatics pipeline" value={misc.molecularIdentification?.bioinformaticsPipeline} />
-              <Row label="Accession status"        value={misc.molecularIdentification?.accessionStatus} />
-              <Row label="Accession number"        value={misc.molecularIdentification?.accessionNumber} />
-            </div>
+          <div className="space-y-3">
+            {molecularRuns.map((run, index) => (
+              <div key={run.id || index} className="bg-white border border-gray-100 rounded-xl p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="text-sm font-medium text-gray-600">Run #{index + 1}</span>
+                </div>
+                {/* Show linked ISO + generated MOLID */}
+                <TestIdBadge run={run} label="MOLID" />
+                <div className="space-y-3">
+                  <Row label="Species name"            value={run.speciesName} />
+                  <Row label="PCR platform"            value={run.pcrPlatform} />
+                  <Row label="PCR protocol"            value={run.pcrProtocolType} />
+                  <Row label="Sequencing method"       value={run.sequencingMethod} />
+                  <Row label="Bioinformatics pipeline" value={run.bioinformaticsPipeline} />
+                  <Row label="Accession status"        value={run.accessionStatus} />
+                  <Row label="Accession number"        value={run.accessionNumber} />
+                </div>
+              </div>
+            ))}
           </div>
         </Section>
       )}

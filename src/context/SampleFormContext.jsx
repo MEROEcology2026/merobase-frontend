@@ -45,19 +45,10 @@ const initial = {
       biochemicalRuns: [],
       enzymaticRuns: [],
       testNotes: "",
-      molecularIdentification: {
-        hasIdentification: false,
-        linkedId: "",
-        testId: "",
-        speciesName: "",
-        pcrPlatform: "",
-        pcrProtocolType: "",
-        sequencingMethod: "",
-        bioinformaticsPipeline: "",
-        accessionStatus: "Unpublished",
-        accessionNumber: "",
-        rawSequenceFile: null
-      }
+      /* ✅ Molecular identification is now MULTI-RUN — one MOLID per isolate.
+         hasIdentification is the Yes/No gate; runs holds one entry per linked ISO. */
+      hasMolecularIdentification: false,
+      molecularIdentificationRuns: []
     }
   },
   molecular: {
@@ -89,6 +80,40 @@ const initial = {
   }
 };
 
+/* ================= MIGRATE OLD MOLECULAR SHAPE ================= */
+// Older samples stored molecular identification as a single object:
+//   microbiologyTests.molecularIdentification = { hasIdentification, linkedId, testId, ... }
+// The new shape is an array:
+//   microbiologyTests.molecularIdentificationRuns = [ { id, linkedId, testId, ... } ]
+// This converts an old single object into a one-element array so nothing is lost.
+const migrateMolecular = (tests) => {
+  if (!tests) return tests;
+
+  // Already new shape — nothing to do.
+  if (Array.isArray(tests.molecularIdentificationRuns)) {
+    return tests;
+  }
+
+  const old = tests.molecularIdentification;
+  if (old && old.hasIdentification) {
+    const { hasIdentification, ...rest } = old;
+    return {
+      ...tests,
+      hasMolecularIdentification: true,
+      molecularIdentificationRuns: [
+        { id: crypto.randomUUID(), ...rest }
+      ],
+    };
+  }
+
+  // Old object existed but wasn't identified, or no molecular data at all.
+  return {
+    ...tests,
+    hasMolecularIdentification: false,
+    molecularIdentificationRuns: [],
+  };
+};
+
 /* ================= CLEAN MICROBIOLOGY ================= */
 // Strips empty runs before submitting to the API
 const cleanMicrobiology = (microbiology) => {
@@ -105,7 +130,8 @@ const cleanMicrobiology = (microbiology) => {
   const isolatedMorphologyRuns = (microbiology.isolatedMorphologyRuns || [])
     .filter(r => r.isoMorId && r.isoMorId.trim() !== "");
 
-  const tests = microbiology.microbiologyTests || {};
+  /* ✅ Normalize old single-object molecular shape → array first */
+  const tests = migrateMolecular(microbiology.microbiologyTests || {});
 
   /* ── Test runs — must have linkedId AND testId ── */
   const antibacterialRuns = (tests.antibacterialRuns || [])
@@ -120,20 +146,10 @@ const cleanMicrobiology = (microbiology) => {
   const enzymaticRuns = (tests.enzymaticRuns || [])
     .filter(r => r.linkedId && r.testId);
 
-  /* ✅ Molecular Identification — clear orphaned ISO link */
-  let molecularIdentification = tests.molecularIdentification || {};
-  if (
-    molecularIdentification.hasIdentification &&
-    molecularIdentification.linkedId &&
-    !validIsoIds.has(molecularIdentification.linkedId)
-  ) {
-    // The linked ISO was deleted — drop the stale link + generated ID
-    molecularIdentification = {
-      ...molecularIdentification,
-      linkedId: "",
-      testId: "",
-    };
-  }
+  /* ✅ Molecular runs — must have linkedId AND testId, and link to a valid ISO.
+     This drops empty runs AND clears orphaned runs whose ISO was deleted. */
+  const molecularIdentificationRuns = (tests.molecularIdentificationRuns || [])
+    .filter(r => r.linkedId && r.testId && validIsoIds.has(r.linkedId));
 
   return {
     ...microbiology,
@@ -145,7 +161,9 @@ const cleanMicrobiology = (microbiology) => {
       antimalarialRuns,
       biochemicalRuns,
       enzymaticRuns,
-      molecularIdentification,
+      /* keep the gate in sync — if no runs survive, it's effectively "No" */
+      hasMolecularIdentification: molecularIdentificationRuns.length > 0,
+      molecularIdentificationRuns,
     }
   };
 };
@@ -188,7 +206,18 @@ export function SampleFormProvider({ children }) {
     }
     setMode("edit");
     setEditingSampleId(sample.metadata?.sampleId || sample.sample_id);
-    setFormData(sample);
+
+    /* ✅ Migrate old molecular shape when loading a sample for edit,
+       so the form always works with the new array shape. */
+    const migrated = {
+      ...sample,
+      microbiology: {
+        ...(sample.microbiology || {}),
+        microbiologyTests: migrateMolecular(sample.microbiology?.microbiologyTests || {}),
+      },
+    };
+
+    setFormData(migrated);
   };
 
   const exitEditMode = () => {

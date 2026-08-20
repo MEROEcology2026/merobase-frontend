@@ -32,6 +32,32 @@ const MICRO_SUBTABS = [
   { id: "tests",     label: "Microbiology Tests" },
 ];
 
+/* ================= IDENTIFIED SPECIES HELPER ================= */
+// Returns a single species name only when every molecular run that has a
+// species agrees on the same one. Supports both the new array shape and the
+// old single-object shape. Returns null when there are zero, or more than one
+// distinct species (per the rule: only show when they all agree / there's one).
+function getIdentifiedSpecies(sample) {
+  const tests = sample?.microbiology?.microbiologyTests;
+  if (!tests) return null;
+
+  const runs = Array.isArray(tests.molecularIdentificationRuns)
+    ? tests.molecularIdentificationRuns
+    : (tests.molecularIdentification?.hasIdentification
+        ? [tests.molecularIdentification]
+        : []);
+
+  const species = [
+    ...new Set(
+      runs
+        .map(r => (r.speciesName || "").trim())
+        .filter(Boolean)
+    )
+  ];
+
+  return species.length === 1 ? species[0] : null;
+}
+
 export default function SampleDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -166,6 +192,10 @@ export default function SampleDetails() {
 
   const isolatedRuns = sample.microbiology?.primaryIsolatedRuns || [];
 
+  /* ✅ Species confirmed by molecular identification — shown italic in the title.
+     null when there are zero or multiple different species. */
+  const identifiedSpecies = getIdentifiedSpecies(sample);
+
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* ================= SIDEBAR ================= */}
@@ -226,8 +256,13 @@ export default function SampleDetails() {
             <span className="inline-block font-mono text-xs text-blue-600 bg-blue-50 px-3 py-1 rounded-full mb-2">
               {sample.sample_id}
             </span>
+            {/* ✅ Sample name stays bold; molecular-confirmed species appends in italic.
+                A manually typed name (no molecular species) shows bold only. */}
             <h1 className="text-2xl font-semibold text-gray-900">
               {sample.sample_name || "Unnamed Sample"}
+              {identifiedSpecies && (
+                <span className="italic font-normal text-gray-600"> - {identifiedSpecies}</span>
+              )}
             </h1>
             <p className="text-sm text-gray-500 mt-1">
               {[sample.collector_name, sample.collection_date?.split("T")[0]]

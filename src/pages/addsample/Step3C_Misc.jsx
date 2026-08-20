@@ -59,6 +59,21 @@ const createTestRun = (linkedId, testId) => ({
   notes: "", checked: [], customTests: []
 });
 
+/* ✅ molecular identification run — one per isolate */
+const createMolecularRun = (linkedId, testId) => ({
+  id: crypto.randomUUID(),
+  linkedId: linkedId || "",
+  testId: testId || "",
+  speciesName: "",
+  pcrPlatform: "",
+  pcrProtocolType: "",
+  sequencingMethod: "",
+  bioinformaticsPipeline: "",
+  accessionStatus: "Unpublished",
+  accessionNumber: "",
+  rawSequenceFile: null,
+});
+
 export default function Step3C_Misc() {
   const { formData, updateSection } = useSampleForm();
   const microTests = formData.microbiology?.microbiologyTests || {};
@@ -81,7 +96,18 @@ export default function Step3C_Misc() {
     ? microTests.biochemicalRuns : [createTestRun()];
   const enzymaticRuns = microTests.enzymaticRuns?.length > 0
     ? microTests.enzymaticRuns : [createTestRun()];
-  const molecular = microTests.molecularIdentification || {};
+
+  /* ✅ molecular is multi-run — no forced default (it's optional, gated by Yes/No) */
+  const hasMolecular = microTests.hasMolecularIdentification || false;
+  const molecularRuns = microTests.molecularIdentificationRuns || [];
+
+  /* ✅ which ISOs are already used by a molecular run (one MOLID per isolate) */
+  const usedMolecularIsoIds = new Set(
+    molecularRuns.map(r => r.linkedId).filter(Boolean)
+  );
+  const availableMolecularIsos = linkOptions.filter(
+    o => !usedMolecularIsoIds.has(o.value)
+  );
 
   const [openAntibacterial, setOpenAntibacterial] = useState(true);
   const [openAntimalarial, setOpenAntimalarial]   = useState(true);
@@ -185,6 +211,73 @@ export default function Step3C_Misc() {
     const updated = current.map(r => r.id !== id ? r : { ...r, [field]: value });
     const final   = field === "linkedId" ? regenIds(updated, generateEnzymaticId) : updated;
     updateMicroTests({ enzymaticRuns: final });
+  };
+
+  /* ================= ✅ MOLECULAR HANDLERS ================= */
+  // Toggle the Yes/No gate. "Yes" seeds the first run (linked to the first
+  // available ISO if any). "No" wipes all molecular runs.
+  const setMolecularEnabled = (isYes) => {
+    if (!isYes) {
+      updateMicroTests({
+        hasMolecularIdentification: false,
+        molecularIdentificationRuns: [],
+      });
+      return;
+    }
+    // Turning on — if there are no runs yet, seed one.
+    if (molecularRuns.length === 0) {
+      const firstId = availableMolecularIsos[0]?.value || "";
+      const testId  = firstId ? generateMolecularTestId(firstId) : "";
+      updateMicroTests({
+        hasMolecularIdentification: true,
+        molecularIdentificationRuns: [createMolecularRun(firstId, testId)],
+      });
+    } else {
+      updateMicroTests({ hasMolecularIdentification: true });
+    }
+  };
+
+  const addMolecularRun = () => {
+    // Only add if there's an ISO not yet linked to a molecular run.
+    if (availableMolecularIsos.length === 0) return;
+    const firstId = availableMolecularIsos[0]?.value || "";
+    const testId  = firstId ? generateMolecularTestId(firstId) : "";
+    updateMicroTests({
+      molecularIdentificationRuns: [...molecularRuns, createMolecularRun(firstId, testId)]
+    });
+  };
+
+  const removeMolecularRun = (id) => {
+    const updated = molecularRuns.filter(r => r.id !== id);
+    updateMicroTests({
+      molecularIdentificationRuns: updated,
+      // if the last run is removed, flip the gate back to "No"
+      hasMolecularIdentification: updated.length > 0,
+    });
+  };
+
+  const updateMolecularRun = (id, field, value) => {
+    updateMicroTests({
+      molecularIdentificationRuns: molecularRuns.map(r =>
+        r.id !== id ? r : { ...r, [field]: value }
+      )
+    });
+  };
+
+  // Changing a run's linked ISO — block if another run already uses it,
+  // and regenerate this run's MOLID.
+  const updateMolecularLink = (id, linkedId) => {
+    const alreadyUsed = molecularRuns.some(r => r.id !== id && r.linkedId === linkedId);
+    if (linkedId && alreadyUsed) return; // one MOLID per isolate
+    updateMicroTests({
+      molecularIdentificationRuns: molecularRuns.map(r =>
+        r.id !== id ? r : {
+          ...r,
+          linkedId,
+          testId: linkedId ? generateMolecularTestId(linkedId) : "",
+        }
+      )
+    });
   };
 
   /* ================= CHECKBOX HANDLERS ================= */
@@ -452,107 +545,151 @@ export default function Step3C_Misc() {
           onChange={(e) => updateMicroTests({ testNotes: e.target.value })} />
       </div>
 
-      {/* ================= MOLECULAR IDENTIFICATION ================= */}
+      {/* ================= MOLECULAR IDENTIFICATION (MULTI-RUN) ================= */}
       <CollapsibleBox title="Molecular Identification" open={openMolecular} setOpen={setOpenMolecular}>
         <Select
           label="Has the sample been molecularly identified?"
-          value={molecular.hasIdentification ? "Yes" : "No"}
-          onChange={(e) => {
-            const isYes = e.target.value === "Yes";
-            updateMicroTests({
-              molecularIdentification: isYes
-                ? { ...molecular, hasIdentification: true }
-                : { ...molecular, hasIdentification: false, linkedId: "", testId: "" }
-            });
-          }}
+          value={hasMolecular ? "Yes" : "No"}
+          onChange={(e) => setMolecularEnabled(e.target.value === "Yes")}
           options={["No", "Yes"]} />
 
-        {molecular.hasIdentification && (
-          <>
-            {/* ✅ REQUIRED ISO LINK SELECTOR */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Link size={14} className="text-blue-600" />
-                <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">
-                  Link to Primary Isolated <span className="text-red-500">*</span>
-                </p>
-              </div>
-              {linkOptions.length === 0 ? (
-                <p className="text-xs text-yellow-600 bg-yellow-50 rounded px-3 py-2">
+        {hasMolecular && (
+          <div className="mt-4 space-y-4">
+            <p className="text-xs text-gray-500">
+              Add one entry per isolate. Each isolate can have a single molecular identification.
+            </p>
+
+            {linkOptions.length === 0 ? (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
+                <p className="text-xs text-yellow-700">
                   No primary isolated entries found — go to Step 3A first.
                 </p>
-              ) : (
-                <select
-                  value={molecular.linkedId || ""}
-                  onChange={(e) => {
-                    const linkedId = e.target.value;
-                    updateMicroTests({
-                      molecularIdentification: {
-                        ...molecular,
-                        linkedId,
-                        testId: generateMolecularTestId(linkedId),
-                      }
-                    });
-                  }}
-                  className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none">
-                  <option value="">— Select Primary Isolated ID —</option>
-                  {linkOptions.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              )}
-              {molecular.testId && (
-                <div className="mt-2">
-                  <p className="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-1">
-                    Auto-generated Molecular ID:
-                  </p>
-                  <p className="text-sm font-bold font-mono text-blue-700 break-all">{molecular.testId}</p>
-                </div>
-              )}
-            </div>
-
-            {/* Fields only appear once an ISO is linked (enforces required) */}
-            {molecular.linkedId ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <Input label="Species Name" value={molecular.speciesName || ""}
-                  onChange={(e) => updateMicroTests({ molecularIdentification: { ...molecular, speciesName: e.target.value } })} />
-                <Select label="PCR Platform" value={molecular.pcrPlatform || ""}
-                  onChange={(e) => updateMicroTests({ molecularIdentification: { ...molecular, pcrPlatform: e.target.value } })}
-                  options={["", "Conventional PCR", "qPCR", "RT-PCR"]} />
-                <Select label="PCR Protocol Type" value={molecular.pcrProtocolType || ""}
-                  onChange={(e) => updateMicroTests({ molecularIdentification: { ...molecular, pcrProtocolType: e.target.value } })}
-                  options={["", "Standard", "Touchdown", "Nested"]} />
-                <Select label="Sequencing Method" value={molecular.sequencingMethod || ""}
-                  onChange={(e) => updateMicroTests({ molecularIdentification: { ...molecular, sequencingMethod: e.target.value } })}
-                  options={["", "Sanger", "NGS", "MinION"]} />
-                <Select label="Bioinformatics Pipeline" value={molecular.bioinformaticsPipeline || ""}
-                  onChange={(e) => updateMicroTests({ molecularIdentification: { ...molecular, bioinformaticsPipeline: e.target.value } })}
-                  options={["", "QIIME", "Mothur", "Custom"]} />
-                <Select label="Accession / Submission" value={molecular.accessionStatus || "Unpublished"}
-                  onChange={(e) => updateMicroTests({ molecularIdentification: { ...molecular, accessionStatus: e.target.value } })}
-                  options={["Unpublished", "Published"]} />
-                {molecular.accessionStatus === "Published" && (
-                  <Input label="Accession Number" value={molecular.accessionNumber || ""}
-                    onChange={(e) => updateMicroTests({ molecularIdentification: { ...molecular, accessionNumber: e.target.value } })} />
-                )}
-                <div className="md:col-span-2">
-                  <FileDropzone
-                    multiple={false}
-                    accept=".fastq,.fq,.ab1,.txt,.fasta,.fa"
-                    existing={molecular.rawSequenceFile ? [molecular.rawSequenceFile] : []}
-                    onFiles={(files) => updateMicroTests({ molecularIdentification: { ...molecular, rawSequenceFile: files?.[0] || null } })} />
-                </div>
               </div>
             ) : (
-              linkOptions.length > 0 && (
-                <p className="text-xs text-yellow-600 bg-yellow-50 rounded px-3 py-2 mt-3">
-                  Select a Primary Isolated ID above to continue.
-                </p>
-              )
+              <>
+                {molecularRuns.map((run, index) => (
+                  <MolecularRunBlock
+                    key={run.id}
+                    run={run}
+                    index={index}
+                    linkOptions={linkOptions}
+                    usedIsoIds={usedMolecularIsoIds}
+                    canRemove={molecularRuns.length > 1}
+                    onLinkChange={(v) => updateMolecularLink(run.id, v)}
+                    onFieldChange={(field, v) => updateMolecularRun(run.id, field, v)}
+                    onRemove={() => removeMolecularRun(run.id)} />
+                ))}
+
+                {availableMolecularIsos.length > 0 ? (
+                  <button type="button" onClick={addMolecularRun}
+                    className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                    <Plus size={14} /> Add Another Run
+                  </button>
+                ) : (
+                  <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                    <p className="text-xs text-green-700">
+                      ✓ Every isolate has a molecular identification entry.
+                    </p>
+                  </div>
+                )}
+              </>
             )}
-          </>
+          </div>
         )}
       </CollapsibleBox>
+    </div>
+  );
+}
+
+/* ================= ✅ MOLECULAR RUN BLOCK ================= */
+function MolecularRunBlock({
+  run, index, linkOptions, usedIsoIds, canRemove,
+  onLinkChange, onFieldChange, onRemove
+}) {
+  return (
+    <div className="border rounded-xl p-4 bg-gray-50 space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-semibold text-gray-700">Run #{index + 1}</h3>
+          {run.testId && (
+            <p className="text-xs font-mono text-blue-600 mt-0.5 break-all">{run.testId}</p>
+          )}
+        </div>
+        {canRemove && (
+          <button type="button" onClick={onRemove}
+            className="flex items-center gap-1 text-red-500 text-sm hover:text-red-700 transition ml-4 flex-shrink-0">
+            <Trash2 size={14} /> Remove
+          </button>
+        )}
+      </div>
+
+      {/* ISO link selector — disables ISOs already used by another molecular run */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <div className="flex items-center gap-2 mb-2">
+          <Link size={14} className="text-blue-600" />
+          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">
+            Link to Primary Isolated <span className="text-red-500">*</span>
+          </p>
+        </div>
+        <select value={run.linkedId || ""} onChange={(e) => onLinkChange(e.target.value)}
+          className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none">
+          <option value="">— Select Primary Isolated ID —</option>
+          {linkOptions.map(opt => {
+            const takenByOther = usedIsoIds.has(opt.value) && run.linkedId !== opt.value;
+            return (
+              <option key={opt.value} value={opt.value} disabled={takenByOther}>
+                {opt.label}{takenByOther ? " (already identified)" : ""}
+              </option>
+            );
+          })}
+        </select>
+        {run.testId && (
+          <div className="mt-2">
+            <p className="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-1">
+              Auto-generated Molecular ID:
+            </p>
+            <p className="text-sm font-bold font-mono text-blue-700 break-all">{run.testId}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Fields appear only once an ISO is linked (enforces required) */}
+      {run.linkedId ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input label="Species Name" value={run.speciesName || ""}
+            onChange={(e) => onFieldChange("speciesName", e.target.value)} />
+          <Select label="PCR Platform" value={run.pcrPlatform || ""}
+            onChange={(e) => onFieldChange("pcrPlatform", e.target.value)}
+            options={["", "Conventional PCR", "qPCR", "RT-PCR"]} />
+          <Select label="PCR Protocol Type" value={run.pcrProtocolType || ""}
+            onChange={(e) => onFieldChange("pcrProtocolType", e.target.value)}
+            options={["", "Standard", "Touchdown", "Nested"]} />
+          <Select label="Sequencing Method" value={run.sequencingMethod || ""}
+            onChange={(e) => onFieldChange("sequencingMethod", e.target.value)}
+            options={["", "Sanger", "NGS", "MinION"]} />
+          <Select label="Bioinformatics Pipeline" value={run.bioinformaticsPipeline || ""}
+            onChange={(e) => onFieldChange("bioinformaticsPipeline", e.target.value)}
+            options={["", "QIIME", "Mothur", "Custom"]} />
+          <Select label="Accession / Submission" value={run.accessionStatus || "Unpublished"}
+            onChange={(e) => onFieldChange("accessionStatus", e.target.value)}
+            options={["Unpublished", "Published"]} />
+          {run.accessionStatus === "Published" && (
+            <Input label="Accession Number" value={run.accessionNumber || ""}
+              onChange={(e) => onFieldChange("accessionNumber", e.target.value)} />
+          )}
+          <div className="md:col-span-2">
+            <FileDropzone
+              multiple={false}
+              accept=".fastq,.fq,.ab1,.txt,.fasta,.fa"
+              existing={run.rawSequenceFile ? [run.rawSequenceFile] : []}
+              onFiles={(files) => onFieldChange("rawSequenceFile", files?.[0] || null)} />
+          </div>
+        </div>
+      ) : (
+        <p className="text-xs text-yellow-600 bg-yellow-50 rounded px-3 py-2">
+          Select a Primary Isolated ID above to continue.
+        </p>
+      )}
     </div>
   );
 }

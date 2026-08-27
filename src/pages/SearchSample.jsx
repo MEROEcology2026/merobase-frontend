@@ -83,6 +83,7 @@ export default function SearchSample() {
       loadSampleForEdit({
         metadata: {
           sampleId: full.sample_id,
+          oldId: full.old_id || "",
           sampleName: full.sample_name,
           sampleType: full.sample_type,
           projectType: full.project_type,

@@ -16,8 +16,9 @@ export default function MetadataTab({ metadata }) {
           </p>
           <div className="space-y-3">
             <Row label="Sample name" value={metadata.sampleName} />
+            {/* Old ID — legacy identifier, optional */}
+            <Row label="Old ID" value={metadata.oldId} mono />
             <Row label="Sample type" value={metadata.sampleType} />
-            {/* ✅ ADDED: Part of Sample */}
             <Row label="Part of sample" value={metadata.partOfSample} />
             <Row label="Dive site" value={metadata.diveSite} />
             <Row label="Collection date" value={metadata.collectionDate} />
@@ -39,7 +40,8 @@ export default function MetadataTab({ metadata }) {
             <Row label="Kingdom" value={metadata.kingdom} />
             <Row label="Family" value={metadata.family} />
             <Row label="Genus" value={metadata.genus} />
-            <Row label="Species" value={metadata.species} />
+            {/* Species rendered in italic serif — scientific-name convention */}
+            <Row label="Species" value={metadata.species} serif />
           </div>
 
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 mt-6">
@@ -97,12 +99,15 @@ export default function MetadataTab({ metadata }) {
 }
 
 /* ================= ROW COMPONENT ================= */
-function Row({ label, value, mono }) {
+function Row({ label, value, mono, serif }) {
   if (!value && value !== 0) return null;
   return (
     <div className="flex items-start justify-between gap-4">
       <span className="text-xs text-gray-400 flex-shrink-0 pt-0.5">{label}</span>
-      <span className={`text-sm text-gray-800 text-right ${mono ? "font-mono" : ""}`}>
+      <span
+        className={`text-sm text-gray-800 text-right ${mono ? "font-mono" : ""} ${serif ? "italic" : ""}`}
+        style={serif ? { fontFamily: "Georgia, 'Times New Roman', serif" } : undefined}
+      >
         {value}
       </span>
     </div>

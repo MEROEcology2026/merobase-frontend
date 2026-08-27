@@ -32,14 +32,14 @@ const MICRO_SUBTABS = [
   { id: "tests",     label: "Microbiology Tests" },
 ];
 
-/* ================= IDENTIFIED SPECIES HELPER ================= */
-// Returns a single species name only when every molecular run that has a
-// species agrees on the same one. Supports both the new array shape and the
-// old single-object shape. Returns null when there are zero, or more than one
-// distinct species (per the rule: only show when they all agree / there's one).
-function getIdentifiedSpecies(sample) {
+const SERIF = { fontFamily: "Georgia, 'Times New Roman', serif" };
+
+/* ================= SPECIES SOURCE HELPERS ================= */
+// Collects distinct molecular species names, supporting both the new array
+// shape and the old single-object shape. Never overwrites — returns all.
+function molecularSpeciesList(sample) {
   const tests = sample?.microbiology?.microbiologyTests;
-  if (!tests) return null;
+  if (!tests) return [];
 
   const runs = Array.isArray(tests.molecularIdentificationRuns)
     ? tests.molecularIdentificationRuns
@@ -47,15 +47,16 @@ function getIdentifiedSpecies(sample) {
         ? [tests.molecularIdentification]
         : []);
 
-  const species = [
+  return [
     ...new Set(
-      runs
-        .map(r => (r.speciesName || "").trim())
-        .filter(Boolean)
+      runs.map(r => (r.speciesName || "").trim()).filter(Boolean)
     )
   ];
+}
 
-  return species.length === 1 ? species[0] : null;
+// The primary/current identification comes from the taxonomic metadata field.
+function primarySpecies(sample) {
+  return (sample?.species || "").trim() || null;
 }
 
 export default function SampleDetails() {
@@ -69,7 +70,7 @@ export default function SampleDetails() {
   const [activeTab, setActiveTab] = useState("metadata");
   const [activeMicroTab, setActiveMicroTab] = useState("isolated");
 
-  /* ✅ Get current user role from localStorage */
+  /* Current user role from localStorage */
   const currentUser = JSON.parse(localStorage.getItem("merobase_user") || "{}");
   const isAdmin = currentUser.role === "admin";
 
@@ -115,6 +116,7 @@ export default function SampleDetails() {
     loadSampleForEdit({
       metadata: {
         sampleId:       sample.sample_id,
+        oldId:          sample.old_id || "",
         sampleName:     sample.sample_name,
         sampleType:     sample.sample_type,
         partOfSample:   sample.part_of_sample,
@@ -168,6 +170,7 @@ export default function SampleDetails() {
   /* ================= MAP API RESPONSE ================= */
   const metadata = {
     sampleId:        sample.sample_id,
+    oldId:           sample.old_id,
     sampleName:      sample.sample_name,
     sampleType:      sample.sample_type,
     partOfSample:    sample.part_of_sample,
@@ -192,9 +195,15 @@ export default function SampleDetails() {
 
   const isolatedRuns = sample.microbiology?.primaryIsolatedRuns || [];
 
-  /* ✅ Species confirmed by molecular identification — shown italic in the title.
-     null when there are zero or multiple different species. */
-  const identifiedSpecies = getIdentifiedSpecies(sample);
+  /* ================= SPECIES SOURCES ================= */
+  const primary = primarySpecies(sample);       // metadata taxonomic species
+  const molecular = molecularSpeciesList(sample); // distinct molecular species
+
+  // The name shown beside the sample name = primary (metadata) species.
+  const titleSpecies = primary;
+
+  // Does any species identification exist at all? (drives whether the section shows)
+  const hasAnySpecies = !!primary || molecular.length > 0;
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -236,7 +245,6 @@ export default function SampleDetails() {
             <ArrowLeft size={14} /> Back
           </button>
           <div className="flex items-center gap-3">
-            {/* ✅ Only admin sees Delete button */}
             {isAdmin && (
               <button onClick={handleDelete}
                 className="flex items-center gap-2 px-3 py-2 text-sm text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition">
@@ -253,15 +261,22 @@ export default function SampleDetails() {
         {/* ================= HERO ================= */}
         <div className="bg-white border-b px-8 py-6">
           <div className="mb-4">
-            <span className="inline-block font-mono text-xs text-blue-600 bg-blue-50 px-3 py-1 rounded-full mb-2">
-              {sample.sample_id}
-            </span>
-            {/* ✅ Sample name stays bold; molecular-confirmed species appends in italic.
-                A manually typed name (no molecular species) shows bold only. */}
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <span className="inline-block font-mono text-xs text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                {sample.sample_id}
+              </span>
+              {/* Old ID chip — only if present */}
+              {sample.old_id && (
+                <span className="inline-block font-mono text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full">
+                  Old ID: {sample.old_id}
+                </span>
+              )}
+            </div>
+            {/* Sample name bold; primary (metadata) species in italic serif beside it */}
             <h1 className="text-2xl font-semibold text-gray-900">
               {sample.sample_name || "Unnamed Sample"}
-              {identifiedSpecies && (
-                <span className="italic font-normal text-gray-600"> - {identifiedSpecies}</span>
+              {titleSpecies && (
+                <span className="italic font-normal text-gray-600" style={SERIF}> — {titleSpecies}</span>
               )}
             </h1>
             <p className="text-sm text-gray-500 mt-1">
@@ -309,6 +324,35 @@ export default function SampleDetails() {
               : "None"} />
           </div>
         </div>
+
+        {/* ================= SPECIES IDENTIFICATION ================= */}
+        {hasAnySpecies && (
+          <div className="bg-white border-b px-8 py-6">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+              Species identification
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-3xl">
+              {/* Primary / current — from taxonomic metadata */}
+              <SpeciesRow
+                label="Primary / current"
+                source="Taxonomic metadata"
+                names={primary ? [primary] : []} />
+
+              {/* Molecular — from molecular identification runs */}
+              <SpeciesRow
+                label="Molecular"
+                source="Molecular identification"
+                names={molecular} />
+            </div>
+            {primary && molecular.length > 0 &&
+              !molecular.includes(primary) && (
+                <p className="text-xs text-amber-600 mt-3 max-w-3xl">
+                  Note: the molecular identification differs from the current taxonomic
+                  identification. Both are shown as recorded — neither overwrites the other.
+                </p>
+            )}
+          </div>
+        )}
 
         {/* ================= MAIN TABS ================= */}
         <div className="bg-white border-b px-8 overflow-x-auto">
@@ -380,6 +424,30 @@ export default function SampleDetails() {
 
         </div>
       </main>
+    </div>
+  );
+}
+
+/* ================= SPECIES ROW ================= */
+function SpeciesRow({ label, source, names }) {
+  const has = names && names.length > 0;
+  return (
+    <div className="bg-white border border-gray-100 rounded-xl p-4">
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{label}</p>
+        <span className="text-[10px] text-gray-400">{source}</span>
+      </div>
+      {has ? (
+        <div className="space-y-0.5">
+          {names.map((n) => (
+            <p key={n} className="text-[15px] text-gray-800 italic" style={SERIF}>
+              {n}
+            </p>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-gray-300 italic">Not recorded</p>
+      )}
     </div>
   );
 }

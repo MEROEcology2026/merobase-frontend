@@ -12,6 +12,7 @@ const SampleFormContext = createContext(null);
 const initial = {
   metadata: {
     sampleName: "",
+    oldId: "",
     sampleType: "Biological",
     projectType: "A",
     partOfSample: "",
@@ -243,6 +244,7 @@ export function SampleFormProvider({ children }) {
 
     const payload = {
       sample_id:       sampleId,
+      old_id:          metadata.oldId || null,
       sample_name:     metadata.sampleName,
       sample_type:     metadata.sampleType,
       project_type:    metadata.projectType,

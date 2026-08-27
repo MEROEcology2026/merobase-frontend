@@ -136,6 +136,7 @@ export default function EditSample() {
       loadSampleForEdit({
         metadata: {
           sampleId:        full.sample_id,
+          oldId:           full.old_id || "",
           sampleName:      full.sample_name,
           sampleType:      full.sample_type,
           partOfSample:    full.part_of_sample,

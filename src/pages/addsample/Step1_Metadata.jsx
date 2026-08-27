@@ -115,7 +115,7 @@ export default function Step1_Metadata() {
     setLngError(validateLng(v));
   };
 
-  /* ── when map is clicked, always valid so clear errors ── */
+  /* -- when map is clicked, always valid so clear errors -- */
   const handleMapClick = (lat, lng) => {
     setValue("latitude", lat);
     setValue("longitude", lng);
@@ -151,7 +151,6 @@ export default function Step1_Metadata() {
     setFlyTo([lat, lng]);
     setSearchResults([]);
     setSearchQuery(result.display_name.split(",")[0]);
-    /* search results are always valid coords */
     setLatError(null);
     setLngError(null);
   };
@@ -199,6 +198,23 @@ export default function Step1_Metadata() {
             Ready
           </div>
         )}
+      </div>
+
+      {/* ================= OLD ID (optional, legacy) ================= */}
+      <div className="rounded-xl px-5 py-4 bg-amber-50 border border-amber-200">
+        <label className="block text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">
+          Old ID <span className="normal-case font-normal text-amber-600">— optional, from the previous system</span>
+        </label>
+        <input
+          type="text"
+          value={metadata.oldId || ""}
+          onChange={(e) => setValue("oldId", e.target.value)}
+          placeholder="e.g. the sample's ID in the old records"
+          className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-base font-mono focus:ring-2 focus:ring-amber-300 focus:outline-none"
+        />
+        <p className="text-xs text-amber-600 mt-1.5">
+          Leave blank for new samples. This does not affect the generated Sample ID above.
+        </p>
       </div>
 
       {/* ================= SAMPLE PHOTO ================= */}
@@ -304,7 +320,7 @@ export default function Step1_Metadata() {
         open={open.map}
         toggle={() => toggle("map")}
       >
-        {/* ── Search ── */}
+        {/* -- Search -- */}
         <div ref={searchRef} className="relative mb-4">
           <div className="flex gap-2">
             <input type="text" value={searchQuery}
@@ -333,7 +349,7 @@ export default function Step1_Metadata() {
           )}
         </div>
 
-        {/* ── Map ── */}
+        {/* -- Map -- */}
         <div className="h-64 rounded-xl overflow-hidden mb-4">
           <MapContainer center={[-8.34, 115.54]} zoom={12} className="h-full w-full">
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
@@ -346,7 +362,7 @@ export default function Step1_Metadata() {
           </MapContainer>
         </div>
 
-        {/* ── GPS Inputs with validation ── */}
+        {/* -- GPS Inputs with validation -- */}
         <Grid>
           {/* Latitude */}
           <div>
@@ -391,7 +407,7 @@ export default function Step1_Metadata() {
           </div>
         </Grid>
 
-        {/* ── GPS summary if both valid ── */}
+        {/* -- GPS summary if both valid -- */}
         {metadata.latitude && metadata.longitude && !latError && !lngError && (
           <div className="mt-3 bg-green-50 border border-green-200 rounded-lg px-4 py-2 flex items-center gap-2">
             <span className="text-green-600 text-sm">✓</span>

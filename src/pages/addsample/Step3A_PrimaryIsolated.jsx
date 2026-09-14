@@ -14,6 +14,7 @@ const ISOLATED_TYPES = ["Fungi", "Bacteria"];
 const createIsolatedRun = (sampleId, isolatedType, agarMedia, dilution, isoIndex) => ({
   id: crypto.randomUUID(),
   isolatedId: generateIsolatedId(sampleId, isolatedType, agarMedia, dilution, isoIndex),
+  oldId: "",
   isolatedType: isolatedType || "",
   agarMedia: agarMedia || "",
   dilution: dilution || "",
@@ -168,6 +169,23 @@ export default function Step3A_PrimaryIsolated() {
                     </p>
                     <p className="text-lg font-bold font-mono text-blue-700">
                       {run.isolatedId || "Select isolated type, agar media and dilution to generate ID"}
+                    </p>
+                  </div>
+
+                  {/* ================= OLD ID (optional, legacy) ================= */}
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+                    <label className="block text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">
+                      Old Isolated ID <span className="normal-case font-normal text-amber-600">— optional, from the previous system</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={run.oldId || ""}
+                      onChange={(e) => updateField(run.id, "oldId", e.target.value)}
+                      placeholder="e.g. the isolate's ID in the old records"
+                      className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-amber-300 focus:outline-none"
+                    />
+                    <p className="text-xs text-amber-600 mt-1.5">
+                      Leave blank for new isolates. Does not affect the generated ID above.
                     </p>
                   </div>
 

@@ -43,6 +43,16 @@ export default function MolecularTab({ molecular }) {
     <div className="bg-white rounded-xl shadow p-6 mb-6">
       <h2 className="text-lg font-semibold mb-6">Molecular Biology</h2>
 
+      {/* ================= OLD ID ================= */}
+      {molecular.oldId && (
+        <div className="mb-6">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">
+            Old Molecular ID
+          </p>
+          <p className="font-mono text-sm text-amber-700">{molecular.oldId}</p>
+        </div>
+      )}
+
       {/* ================= GENERAL METADATA ================= */}
       <div className="mb-8">
         <h3 className="font-semibold mb-4 text-gray-700">
@@ -107,9 +117,10 @@ export default function MolecularTab({ molecular }) {
       )}
 
       {/* ================= FILES ================= */}
+      {/* ✅ gelImage is a single object — wrap as array for ImageGrid */}
       <ImageGrid
         title="Gel Image"
-        images={molecular.gelImage || []}
+        images={molecular.gelImage ? [molecular.gelImage] : []}
       />
 
       <ImageGrid

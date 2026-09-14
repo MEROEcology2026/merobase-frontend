@@ -122,6 +122,23 @@ export default function Step4_Molecular() {
         )}
       </div>
 
+      {/* ================= OLD ID (optional, legacy) ================= */}
+      <div className="rounded-xl px-5 py-4 bg-amber-50 border border-amber-200">
+        <label className="block text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">
+          Old Molecular ID <span className="normal-case font-normal text-amber-600">— optional, from the previous system</span>
+        </label>
+        <input
+          type="text"
+          value={molecular.oldId || ""}
+          onChange={(e) => setValue("oldId", e.target.value)}
+          placeholder="e.g. the molecular ID in the old records"
+          className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-base font-mono focus:ring-2 focus:ring-amber-300 focus:outline-none"
+        />
+        <p className="text-xs text-amber-600 mt-1.5">
+          Leave blank for new samples. This does not affect the generated Molecular ID above.
+        </p>
+      </div>
+
       {/* ================= FILE UPLOADS ================= */}
       <Box title="Gel & RAW Sequence Files" open={open.files} toggle={() => toggle("files")}>
         <div className="grid md:grid-cols-2 gap-6">

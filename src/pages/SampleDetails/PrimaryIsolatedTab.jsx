@@ -19,6 +19,15 @@ export default function PrimaryIsolatedTab({ primary }) {
               {primary.isolatedId}
             </span>
           </div>
+          {/* Old ID */}
+          {primary.oldId && (
+            <div className="mb-4">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">
+                Old Isolated ID
+              </p>
+              <p className="font-mono text-sm text-amber-700">{primary.oldId}</p>
+            </div>
+          )}
           <div className="space-y-3">
             <Row label="Shelf" value={primary.shelf} />
             <Row label="Position in box" value={primary.positionInBox} />
@@ -75,6 +84,16 @@ export default function PrimaryIsolatedTab({ primary }) {
               <p className="font-mono font-semibold text-blue-700 text-sm">
                 {run.isolatedId}
               </p>
+            </div>
+          )}
+
+          {/* ================= OLD ID ================= */}
+          {run.oldId && (
+            <div className="mb-4">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">
+                Old Isolated ID
+              </p>
+              <p className="font-mono text-sm text-amber-700">{run.oldId}</p>
             </div>
           )}
 

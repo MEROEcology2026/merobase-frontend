@@ -378,10 +378,10 @@ function SpecimenRow({ s, onDetails, onEdit, onDelete, isAdmin }) {
         <p className="text-[15px] font-semibold text-stone-900 leading-snug truncate">
           {s.sample_name || "Unnamed specimen"}
         </p>
-        {s.identified_species ? (
+        {s.species ? (
           <p className="text-[13px] text-stone-600 leading-snug truncate"
              style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontStyle: "italic" }}>
-            {s.identified_species}
+            {s.species}
           </p>
         ) : (
           <p className="text-[12px] text-stone-300 italic leading-snug">Not yet identified</p>

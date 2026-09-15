@@ -338,10 +338,10 @@ export default function SampleDetails() {
                 source="Taxonomic metadata"
                 names={primary ? [primary] : []} />
 
-              {/* Molecular — from molecular identification runs */}
+              {/* Molecular — from microbiology molecular identification runs */}
               <SpeciesRow
-                label="Molecular"
-                source="Molecular identification"
+                label="Microbiology molecular identification"
+                source="Microbiology · molecular ID"
                 names={molecular} />
             </div>
             {primary && molecular.length > 0 &&

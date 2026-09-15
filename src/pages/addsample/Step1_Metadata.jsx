@@ -10,7 +10,11 @@ const SAMPLE_TYPES = ["Biological", "Non-Biological"];
 const DIVE_SITES = [
   "USAT Liberty – Tulamben", "Tulamben Drop Off", "Coral Garden – Tulamben",
   "Kubu Wall", "Batu Kelebit", "Secret Bay – Gilimanuk",
-  "Pemuteran Reef", "Menjangan Island", "Other",
+  "Pemuteran Reef", "Menjangan Island",
+  "Seraya Secret", "MERO", "Noisy Reef", "Batu Niti", "Melasti",
+  "Bali Dive Resort", "Batu Lumbang", "Emerald", "Gerombong",
+  "Liberty Shipwreck", "Kanna", "Batu Ringgit", "Bulakan",
+  "Other",
 ];
 const SUBSTRATES = [
   "Live Coral", "Dead Coral", "Rubble", "Sand", "Mud",

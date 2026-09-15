@@ -18,6 +18,15 @@ const ROLE_COLORS = {
   user:  { bg:"bg-green-100", text:"text-green-700", dot:"bg-green-500", label:"User"  },
 };
 
+/* ================= DEPTH BUCKETS ================= */
+const DEPTH_BUCKETS = [
+  { label: "0–5 m",   min: 0,   max: 5 },
+  { label: "5–10 m",  min: 5,   max: 10 },
+  { label: "10–20 m", min: 10,  max: 20 },
+  { label: "20–30 m", min: 20,  max: 30 },
+  { label: "30 m+",   min: 30,  max: Infinity },
+];
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const { clearDraftOnly } = useSampleFormContext();
@@ -26,7 +35,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [activeUsers, setActiveUsers] = useState([]);
 
-  /* ── current user from localStorage ── */
+  /* -- current user from localStorage -- */
   const currentUser = JSON.parse(localStorage.getItem("merobase_user") || "{}");
 
   useEffect(() => {
@@ -44,7 +53,7 @@ export default function Dashboard() {
     fetchSamples();
   }, []);
 
-  /* ✅ Fetch active users — refresh every 30 seconds */
+  /* Fetch active users — refresh every 30 seconds */
   useEffect(() => {
     const fetchActiveUsers = async () => {
       try {
@@ -69,6 +78,25 @@ export default function Dashboard() {
   const totalProjects = new Set(samples.map((s) => s.project_type).filter(Boolean)).size;
   const totalKingdoms = new Set(samples.map((s) => s.kingdom).filter(Boolean)).size;
   const totalSpecies  = new Set(samples.map((s) => s.species).filter(Boolean)).size;
+
+  /* ================= NEW KPIs ================= */
+  // Identified % — share of samples that have a species recorded
+  const identifiedCount = useMemo(
+    () => samples.filter((s) => (s.species || "").trim()).length,
+    [samples]
+  );
+  const identifiedPct = totalSamples > 0
+    ? Math.round((identifiedCount / totalSamples) * 100)
+    : 0;
+
+  // Average collection depth (only samples that have a numeric depth)
+  const avgDepth = useMemo(() => {
+    const depths = samples
+      .map((s) => parseFloat(s.depth))
+      .filter((d) => !isNaN(d));
+    if (depths.length === 0) return null;
+    return (depths.reduce((a, b) => a + b, 0) / depths.length);
+  }, [samples]);
 
   const latestRegistered = useMemo(() => {
     return [...samples]
@@ -112,6 +140,70 @@ export default function Dashboard() {
       .map(([date, value]) => ({ date, value }));
   }, [samples]);
 
+  /* ================= NEW CHART DATA ================= */
+
+  // 1. Identification progress — identified vs not
+  const identificationData = useMemo(() => {
+    const notIdentified = totalSamples - identifiedCount;
+    return [
+      { name: "Identified", value: identifiedCount },
+      { name: "Not identified", value: notIdentified },
+    ].filter((d) => d.value > 0);
+  }, [totalSamples, identifiedCount]);
+
+  // 2. Dive site breakdown — samples per site, sorted desc
+  const diveSiteData = useMemo(() => {
+    const acc = {};
+    samples.forEach((s) => {
+      const site = s.dive_site || "Unknown";
+      acc[site] = (acc[site] || 0) + 1;
+    });
+    return Object.entries(acc)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [samples]);
+
+  // 3. Samples added over time — cumulative by month (uses created_at)
+  const registrationData = useMemo(() => {
+    const acc = {};
+    samples.forEach((s) => {
+      if (!s.created_at) return;
+      const d = new Date(s.created_at);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      acc[key] = (acc[key] || 0) + 1;
+    });
+    const sorted = Object.entries(acc).sort((a, b) => a[0].localeCompare(b[0]));
+    let running = 0;
+    return sorted.map(([month, count]) => {
+      running += count;
+      return { month, total: running };
+    });
+  }, [samples]);
+
+  // 4. Substrate distribution
+  const substrateData = useMemo(() => {
+    const acc = {};
+    samples.forEach((s) => {
+      if (!s.substrate) return;
+      acc[s.substrate] = (acc[s.substrate] || 0) + 1;
+    });
+    return Object.entries(acc)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [samples]);
+
+  // 5. Depth distribution — bucketed histogram
+  const depthData = useMemo(() => {
+    const buckets = DEPTH_BUCKETS.map((b) => ({ name: b.label, value: 0 }));
+    samples.forEach((s) => {
+      const d = parseFloat(s.depth);
+      if (isNaN(d)) return;
+      const idx = DEPTH_BUCKETS.findIndex((b) => d >= b.min && d < b.max);
+      if (idx >= 0) buckets[idx].value += 1;
+    });
+    return buckets;
+  }, [samples]);
+
   return (
     <div className="flex min-h-screen bg-gray-100 font-sans">
       {/* ========== SIDEBAR ========== */}
@@ -135,7 +227,7 @@ export default function Dashboard() {
             onClick={() => navigate("/manual")} />
         </nav>
 
-        {/* ── current user badge ── */}
+        {/* -- current user badge -- */}
         {sidebarOpen && (
           <div className="px-4 py-3 border-t border-b">
             <p className="text-xs text-gray-400 mb-1">Logged in as</p>
@@ -172,12 +264,19 @@ export default function Dashboard() {
           </div>
         ) : (
           <>
-            {/* KPI */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+            {/* KPI — now 6 cards */}
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
               <KPI title="Total Samples"  value={totalSamples} />
               <KPI title="Total Projects" value={totalProjects} />
               <KPI title="Total Kingdoms" value={totalKingdoms} />
               <KPI title="Total Species"  value={totalSpecies} />
+              {/* NEW */}
+              <KPI title="Identified"
+                value={`${identifiedPct}%`}
+                sub={`${identifiedCount} of ${totalSamples}`} />
+              <KPI title="Avg Depth"
+                value={avgDepth !== null ? `${avgDepth.toFixed(1)} m` : "—"}
+                sub={avgDepth !== null ? "across recorded depths" : "no depth data"} />
             </div>
 
             {/* Latest + Active Users */}
@@ -185,7 +284,7 @@ export default function Dashboard() {
               <InfoCard title="Latest Registered" sample={latestRegistered} />
               <InfoCard title="Latest Edited"     sample={latestEdited} />
 
-              {/* ✅ ACTIVE USERS WIDGET */}
+              {/* ACTIVE USERS WIDGET */}
               <div className="bg-white rounded-xl shadow p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold">Active Users</h3>
@@ -241,11 +340,11 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Charts */}
+            {/* Charts — existing three */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <ChartBox title="Kingdom Types">
                 {kingdomData.length === 0 ? (
-                  <p className="text-gray-400 italic text-sm">No data yet</p>
+                  <NoData />
                 ) : (
                   <ResponsiveContainer width="100%" height={260}>
                     <PieChart>
@@ -262,12 +361,12 @@ export default function Dashboard() {
 
               <ChartBox title="Project Types">
                 {projectData.length === 0 ? (
-                  <p className="text-gray-400 italic text-sm">No data yet</p>
+                  <NoData />
                 ) : (
                   <ResponsiveContainer width="100%" height={260}>
                     <BarChart data={projectData}>
                       <XAxis dataKey="name" />
-                      <YAxis />
+                      <YAxis allowDecimals={false} />
                       <Tooltip />
                       <Bar dataKey="value">
                         {projectData.map((_, i) => (
@@ -281,15 +380,113 @@ export default function Dashboard() {
 
               <ChartBox title="Collection Date">
                 {dateData.length === 0 ? (
-                  <p className="text-gray-400 italic text-sm">No data yet</p>
+                  <NoData />
                 ) : (
                   <ResponsiveContainer width="100%" height={260}>
                     <LineChart data={dateData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="date" />
-                      <YAxis />
+                      <YAxis allowDecimals={false} />
                       <Tooltip />
                       <Line type="monotone" dataKey="value" stroke="#2563EB" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+              </ChartBox>
+            </div>
+
+            {/* ================= NEW: INSIGHTS ROW ================= */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+
+              {/* 1. Identification progress */}
+              <ChartBox title="Identification Progress">
+                {identificationData.length === 0 ? (
+                  <NoData />
+                ) : (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <PieChart>
+                      <Pie data={identificationData} dataKey="value" innerRadius={55} outerRadius={90} label>
+                        <Cell fill="#10B981" />
+                        <Cell fill="#E5E7EB" />
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+              </ChartBox>
+
+              {/* 4. Substrate distribution */}
+              <ChartBox title="Substrate">
+                {substrateData.length === 0 ? (
+                  <NoData />
+                ) : (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={substrateData} layout="vertical" margin={{ left: 20 }}>
+                      <XAxis type="number" allowDecimals={false} />
+                      <YAxis type="category" dataKey="name" width={90} tick={{ fontSize: 12 }} />
+                      <Tooltip />
+                      <Bar dataKey="value">
+                        {substrateData.map((_, i) => (
+                          <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </ChartBox>
+
+              {/* 5. Depth distribution */}
+              <ChartBox title="Depth Distribution">
+                {samples.every((s) => isNaN(parseFloat(s.depth))) ? (
+                  <NoData />
+                ) : (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={depthData}>
+                      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip />
+                      <Bar dataKey="value" fill="#2563EB" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </ChartBox>
+            </div>
+
+            {/* ================= NEW: SECOND INSIGHTS ROW ================= */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+
+              {/* 2. Dive site breakdown */}
+              <ChartBox title="Samples by Dive Site">
+                {diveSiteData.length === 0 ? (
+                  <NoData />
+                ) : (
+                  <ResponsiveContainer width="100%" height={Math.max(260, diveSiteData.length * 32)}>
+                    <BarChart data={diveSiteData} layout="vertical" margin={{ left: 40 }}>
+                      <XAxis type="number" allowDecimals={false} />
+                      <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 11 }} />
+                      <Tooltip />
+                      <Bar dataKey="value">
+                        {diveSiteData.map((_, i) => (
+                          <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </ChartBox>
+
+              {/* 3. Samples added over time (cumulative) */}
+              <ChartBox title="Samples Added Over Time">
+                {registrationData.length === 0 ? (
+                  <NoData />
+                ) : (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <LineChart data={registrationData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="total" stroke="#10B981" strokeWidth={2} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 )}
@@ -328,6 +525,7 @@ function StatusPanel() {
     { group: "Managing Samples", items: [
       "You can add new samples through the step-by-step form — form always starts blank",
       "Sample ID is auto-generated from Sample Type, Project Type, Part of Sample, Project Number and Sample Number",
+      "You can record an optional Old ID for legacy samples imported from the previous system",
       "You can search and filter samples by kingdom, project, type, date and sample ID",
       "You can edit any existing sample from Edit Sample, Search, and Sample Details pages",
       "Admin can delete samples — user1 and user2 cannot",
@@ -337,11 +535,13 @@ function StatusPanel() {
       "Supports multiple Primary Isolated entries per sample",
       "Each ISO entry has its own Isolated Morphology (1 ISO = 1 ISOMOR enforced)",
       "Antibacterial, Antimalarial, Biochemical and Enzymatic tests linked to ISO directly",
+      "Molecular identification per isolate, with species shown on Sample Details",
       "Test IDs auto-generated per linked ISO — counters reset per ISO",
     ]},
     { group: "Dashboard", items: [
-      "Shows total number of samples, projects, kingdoms, and species",
-      "Charts show breakdown by kingdom, project type, and collection date",
+      "Shows total samples, projects, kingdoms, species, identified % and average depth",
+      "Charts show kingdom, project, collection date, dive site, substrate and depth",
+      "Identification progress and cumulative registrations over time",
       "Shows the most recently added and recently edited sample",
       "Active users widget shows who is online right now (last 15 minutes)",
     ]},
@@ -421,11 +621,12 @@ function NavItem({ icon, label, open, onClick, active }) {
   );
 }
 
-function KPI({ title, value }) {
+function KPI({ title, value, sub }) {
   return (
     <div className="bg-white rounded-xl shadow p-6">
       <p className="text-sm text-gray-500">{title}</p>
       <h2 className="text-3xl font-bold mt-2">{value}</h2>
+      {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
     </div>
   );
 }
@@ -457,4 +658,8 @@ function ChartBox({ title, children }) {
       {children}
     </div>
   );
+}
+
+function NoData() {
+  return <p className="text-gray-400 italic text-sm">No data yet</p>;
 }

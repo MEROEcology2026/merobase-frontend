@@ -23,6 +23,12 @@ const KINGDOM_TINT = {
 };
 const kingdomTint = (k) => KINGDOM_TINT[k] || "#9CA3AF";
 
+/* ================= FIXED FILTER OPTIONS ================= */
+const ALL_KINGDOMS = [
+  "Animalia", "Plantae", "Fungi", "Protista",
+  "Bacteria", "Archaea", "Undetermined",
+];
+
 export default function SearchSample() {
   const navigate = useNavigate();
   const { loadSampleForEdit, clearDraftOnly } = useSampleFormContext();
@@ -32,6 +38,8 @@ export default function SearchSample() {
 
   const [query, setQuery] = useState("");
   const [kingdom, setKingdom] = useState("");
+  const [diveSite, setDiveSite] = useState("");
+  const [identified, setIdentified] = useState("");
   const [projectType, setProjectType] = useState("");
   const [sampleType, setSampleType] = useState("");
 
@@ -117,13 +125,18 @@ export default function SearchSample() {
   };
 
   /* ================= DROPDOWN OPTIONS ================= */
-  const kingdoms = useMemo(
-    () => [...new Set(samples.map(s => s.kingdom).filter(Boolean))],
-    [samples]
-  );
+  // Kingdom uses the full fixed list so you can filter by any kingdom,
+  // even ones not yet present in the data.
+  const kingdoms = ALL_KINGDOMS;
 
   const projectTypes = useMemo(
     () => [...new Set(samples.map(s => s.project_type).filter(Boolean))],
+    [samples]
+  );
+
+  // Dive sites come from the data (whatever has actually been recorded).
+  const diveSites = useMemo(
+    () => [...new Set(samples.map(s => s.dive_site).filter(Boolean))].sort(),
     [samples]
   );
 
@@ -136,10 +149,18 @@ export default function SearchSample() {
         sample.identified_species
       ].filter(Boolean).join(" ").toLowerCase();
 
-      const matchesQuery   = searchable.includes(query.toLowerCase());
-      const matchesKingdom = !kingdom || sample.kingdom === kingdom;
-      const matchesProject = !projectType || sample.project_type === projectType;
-      const matchesType    = !sampleType || sample.sample_type === sampleType;
+      const matchesQuery    = searchable.includes(query.toLowerCase());
+      const matchesKingdom  = !kingdom || sample.kingdom === kingdom;
+      const matchesProject  = !projectType || sample.project_type === projectType;
+      const matchesType     = !sampleType || sample.sample_type === sampleType;
+      const matchesDiveSite = !diveSite || sample.dive_site === diveSite;
+
+      // identified = has a taxonomic (metadata) species
+      const hasSpecies = !!(sample.species || "").trim();
+      const matchesIdentified =
+        !identified ||
+        (identified === "identified" && hasSpecies) ||
+        (identified === "not" && !hasSpecies);
 
       let matchesDate = true;
       if (range[0].startDate && range[0].endDate && sample.collection_date) {
@@ -147,16 +168,19 @@ export default function SearchSample() {
         matchesDate = d >= range[0].startDate && d <= range[0].endDate;
       }
 
-      return matchesQuery && matchesKingdom && matchesProject && matchesType && matchesDate;
+      return matchesQuery && matchesKingdom && matchesProject && matchesType
+        && matchesDiveSite && matchesIdentified && matchesDate;
     });
-  }, [samples, query, kingdom, projectType, sampleType, range]);
+  }, [samples, query, kingdom, projectType, sampleType, diveSite, identified, range]);
 
   const activeFilters =
     (kingdom ? 1 : 0) + (projectType ? 1 : 0) + (sampleType ? 1 : 0) +
+    (diveSite ? 1 : 0) + (identified ? 1 : 0) +
     (range[0].startDate && range[0].endDate ? 1 : 0);
 
   const clearAll = () => {
     setQuery(""); setKingdom(""); setProjectType(""); setSampleType("");
+    setDiveSite(""); setIdentified("");
     setRange([{ startDate: null, endDate: null, key: "selection" }]);
   };
 
@@ -218,6 +242,9 @@ export default function SearchSample() {
           <FilterSelect value={projectType} onChange={setProjectType} placeholder="All projects" options={projectTypes} />
           <FilterSelect value={sampleType} onChange={setSampleType} placeholder="All types"
             options={["Biological", "Non-Biological"]} />
+          <FilterSelect value={diveSite} onChange={setDiveSite} placeholder="All dive sites" options={diveSites} />
+          <FilterSelect value={identified} onChange={setIdentified} placeholder="All"
+            options={[{ v: "identified", l: "Identified" }, { v: "not", l: "Not identified" }]} />
 
           {/* date */}
           <div ref={pickerRef} className="relative">
@@ -331,12 +358,19 @@ function SpecimenRow({ s, onDetails, onEdit, onDelete, isAdmin }) {
 
       {/* catalogue number */}
       <div className="pl-2">
-        <span className="font-mono text-[13px] text-cyan-800 font-medium break-all">
-          {s.sample_id}
-        </span>
-        {s.sample_type && (
-          <span className="md:hidden ml-2 text-[10px] text-stone-400 uppercase tracking-wide">
-            {s.sample_type}
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[13px] text-cyan-800 font-medium break-all">
+            {s.sample_id}
+          </span>
+          {s.sample_type && (
+            <span className="md:hidden text-[10px] text-stone-400 uppercase tracking-wide">
+              {s.sample_type}
+            </span>
+          )}
+        </div>
+        {s.old_id && (
+          <span className="font-mono text-[11px] text-amber-700 break-all block mt-0.5">
+            Old: {s.old_id}
           </span>
         )}
       </div>
@@ -389,13 +423,17 @@ function SpecimenRow({ s, onDetails, onEdit, onDelete, isAdmin }) {
 
 /* ================= FILTER SELECT ================= */
 function FilterSelect({ value, onChange, placeholder, options }) {
+  // options can be plain strings, or { v, l } objects when value !== label
+  const norm = options.map((o) =>
+    typeof o === "object" ? o : { v: o, l: o }
+  );
   return (
     <select value={value} onChange={(e) => onChange(e.target.value)}
       className={`text-sm px-2.5 py-1.5 rounded-lg border bg-white transition cursor-pointer
         focus:ring-2 focus:ring-cyan-200 focus:outline-none
         ${value ? "border-cyan-300 text-cyan-800 bg-cyan-50" : "border-stone-200 text-stone-600"}`}>
       <option value="">{placeholder}</option>
-      {options.map((o) => <option key={o} value={o}>{o}</option>)}
+      {norm.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
     </select>
   );
 }

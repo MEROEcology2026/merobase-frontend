@@ -89,14 +89,14 @@ export default function Dashboard() {
     ? Math.round((identifiedCount / totalSamples) * 100)
     : 0;
 
-  // Average collection depth (only samples that have a numeric depth)
-  const avgDepth = useMemo(() => {
-    const depths = samples
-      .map((s) => parseFloat(s.depth))
-      .filter((d) => !isNaN(d));
-    if (depths.length === 0) return null;
-    return (depths.reduce((a, b) => a + b, 0) / depths.length);
-  }, [samples]);
+  // Molecular identification — samples that have a molecular species (identified_species)
+  const molecularCount = useMemo(
+    () => samples.filter((s) => (s.identified_species || "").trim()).length,
+    [samples]
+  );
+  const molecularPct = totalSamples > 0
+    ? Math.round((molecularCount / totalSamples) * 100)
+    : 0;
 
   const latestRegistered = useMemo(() => {
     return [...samples]
@@ -142,7 +142,7 @@ export default function Dashboard() {
 
   /* ================= NEW CHART DATA ================= */
 
-  // 1. Identification progress — identified vs not
+  // 1a. Species identification progress — has metadata species vs not
   const identificationData = useMemo(() => {
     const notIdentified = totalSamples - identifiedCount;
     return [
@@ -150,6 +150,15 @@ export default function Dashboard() {
       { name: "Not identified", value: notIdentified },
     ].filter((d) => d.value > 0);
   }, [totalSamples, identifiedCount]);
+
+  // 1b. Microbiology molecular identification — has molecular species vs not
+  const molecularIdData = useMemo(() => {
+    const without = totalSamples - molecularCount;
+    return [
+      { name: "Molecular ID", value: molecularCount },
+      { name: "No molecular ID", value: without },
+    ].filter((d) => d.value > 0);
+  }, [totalSamples, molecularCount]);
 
   // 2. Dive site breakdown — samples per site, sorted desc
   const diveSiteData = useMemo(() => {
@@ -265,18 +274,18 @@ export default function Dashboard() {
         ) : (
           <>
             {/* KPI — now 6 cards */}
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-6 mb-8">
               <KPI title="Total Samples"  value={totalSamples} />
               <KPI title="Total Projects" value={totalProjects} />
               <KPI title="Total Kingdoms" value={totalKingdoms} />
               <KPI title="Total Species"  value={totalSpecies} />
-              {/* NEW */}
-              <KPI title="Identified"
+              {/* NEW percentages */}
+              <KPI title="Species Identified"
                 value={`${identifiedPct}%`}
                 sub={`${identifiedCount} of ${totalSamples}`} />
-              <KPI title="Avg Depth"
-                value={avgDepth !== null ? `${avgDepth.toFixed(1)} m` : "—"}
-                sub={avgDepth !== null ? "across recorded depths" : "no depth data"} />
+              <KPI title="Molecular ID"
+                value={`${molecularPct}%`}
+                sub={`${molecularCount} of ${totalSamples}`} />
             </div>
 
             {/* Latest + Active Users */}
@@ -395,17 +404,18 @@ export default function Dashboard() {
               </ChartBox>
             </div>
 
-            {/* ================= NEW: INSIGHTS ROW ================= */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+            {/* ================= NEW: IDENTIFICATION DONUTS ================= */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
 
-              {/* 1. Identification progress */}
-              <ChartBox title="Identification Progress">
+              {/* 1a. Species identification (metadata) */}
+              <ChartBox title="Species Identified">
                 {identificationData.length === 0 ? (
                   <NoData />
                 ) : (
                   <ResponsiveContainer width="100%" height={260}>
                     <PieChart>
-                      <Pie data={identificationData} dataKey="value" innerRadius={55} outerRadius={90} label>
+                      <Pie data={identificationData} dataKey="value" nameKey="name"
+                        innerRadius={55} outerRadius={90} label>
                         <Cell fill="#10B981" />
                         <Cell fill="#E5E7EB" />
                       </Pie>
@@ -413,7 +423,35 @@ export default function Dashboard() {
                     </PieChart>
                   </ResponsiveContainer>
                 )}
+                <p className="text-xs text-gray-400 text-center mt-2">
+                  Samples with a taxonomic species recorded
+                </p>
               </ChartBox>
+
+              {/* 1b. Microbiology molecular identification */}
+              <ChartBox title="Microbiology Molecular ID">
+                {molecularIdData.length === 0 ? (
+                  <NoData />
+                ) : (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <PieChart>
+                      <Pie data={molecularIdData} dataKey="value" nameKey="name"
+                        innerRadius={55} outerRadius={90} label>
+                        <Cell fill="#8B5CF6" />
+                        <Cell fill="#E5E7EB" />
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+                <p className="text-xs text-gray-400 text-center mt-2">
+                  Samples with a molecular identification (species)
+                </p>
+              </ChartBox>
+            </div>
+
+            {/* ================= NEW: INSIGHTS ROW ================= */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
 
               {/* 4. Substrate distribution */}
               <ChartBox title="Substrate">

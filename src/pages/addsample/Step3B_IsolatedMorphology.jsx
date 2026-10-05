@@ -9,10 +9,11 @@ const MACROSCOPIC_ARRANGEMENTS = ["Single", "Cluster", "Chains"];
 const COLONY_SHAPES    = ["Circular", "Irregular", "Filamentous"];
 const COLONY_MARGINS   = ["Entire", "Undulate", "Lobate"];
 const COLONY_ELEVATIONS = ["Flat", "Raised", "Convex"];
-const COLONY_COLORS    = ["White", "Cream", "Yellow", "Red"];
+/* ✅ #3 Color → Pigmentation */
+const COLONY_PIGMENTATION = ["Pigmented", "Non-pigmented"];
 const COLONY_TEXTURES  = ["Smooth", "Rough", "Mucoid"];
-const COLONY_MOTILITIES = ["Motile", "Non-motile"];
-const MICROSCOPIC_SHAPES      = ["Coccus", "Bacillus", "Spiral"];
+/* ✅ #5 microscopic shapes — Coccobacillus added; field also allows manual typing */
+const MICROSCOPIC_SHAPES      = ["Coccus", "Bacillus", "Coccobacillus", "Spiral"];
 const MICROSCOPIC_ARRANGEMENTS = ["Single", "Pairs", "Chains"];
 const GRAM_REACTIONS   = ["Positive", "Negative"];
 
@@ -40,12 +41,13 @@ const resizeImage = (file) =>
   });
 
 /* ================= EMPTY RUN FACTORY ================= */
+// ✅ #3 color → pigmentation, #4 motility removed
 const createMorRun = (linkedIsolatedId, isoMorId) => ({
   id: crypto.randomUUID(),
   linkedIsolatedId: linkedIsolatedId || "",
   isoMorId: isoMorId || "",
   macroscopic:       { shape: "", arrangement: "", images: [] },
-  colonyDescription: { shape: "", margin: "", elevation: "", color: "", texture: "", motility: "" },
+  colonyDescription: { shape: "", margin: "", elevation: "", pigmentation: "", texture: "" },
   microscopic:       { shape: "", arrangement: "", gramReaction: "", images: [] },
 });
 
@@ -285,15 +287,14 @@ export default function Step3B_IsolatedMorphology() {
                       <SelectInput label="Elevation" value={run.colonyDescription?.elevation || ""}
                         options={COLONY_ELEVATIONS}
                         onChange={(v) => updateField(run.id, "colonyDescription", "elevation", v)} />
-                      <SelectInput label="Color" value={run.colonyDescription?.color || ""}
-                        options={COLONY_COLORS}
-                        onChange={(v) => updateField(run.id, "colonyDescription", "color", v)} />
+                      {/* ✅ #3 Pigmentation replaces Color */}
+                      <SelectInput label="Pigmentation" value={run.colonyDescription?.pigmentation || ""}
+                        options={COLONY_PIGMENTATION}
+                        onChange={(v) => updateField(run.id, "colonyDescription", "pigmentation", v)} />
                       <SelectInput label="Texture" value={run.colonyDescription?.texture || ""}
                         options={COLONY_TEXTURES}
                         onChange={(v) => updateField(run.id, "colonyDescription", "texture", v)} />
-                      <SelectInput label="Motility" value={run.colonyDescription?.motility || ""}
-                        options={COLONY_MOTILITIES}
-                        onChange={(v) => updateField(run.id, "colonyDescription", "motility", v)} />
+                      {/* ✅ #4 Motility removed */}
                     </div>
                   </CollapsibleSection>
 
@@ -303,7 +304,8 @@ export default function Step3B_IsolatedMorphology() {
                       existing={run.microscopic?.images || []}
                       onFiles={(files) => handleImages(run.id, "microscopic", files)} />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                      <SelectInput label="Shape" value={run.microscopic?.shape || ""}
+                      {/* ✅ #5 Shape: preset list (incl. Coccobacillus) OR type your own */}
+                      <SelectOrCustom label="Shape" value={run.microscopic?.shape || ""}
                         options={MICROSCOPIC_SHAPES}
                         onChange={(v) => updateField(run.id, "microscopic", "shape", v)} />
                       <SelectInput label="Arrangement" value={run.microscopic?.arrangement || ""}
@@ -369,6 +371,50 @@ function SelectInput({ label, value, options, onChange }) {
           <option key={opt} value={opt}>{opt}</option>
         ))}
       </select>
+    </div>
+  );
+}
+
+/* ================= ✅ #5 SELECT OR CUSTOM ================= */
+// Dropdown of presets plus a "Custom…" option that reveals a free-text field.
+// Stores a plain string value either way — no schema change needed.
+function SelectOrCustom({ label, value, options, onChange }) {
+  // If the current value isn't one of the presets (and isn't empty), the user
+  // is in custom mode. Track that so the text box stays open while typing.
+  const valueIsPreset = !value || options.includes(value);
+  const [custom, setCustom] = useState(!valueIsPreset);
+
+  const handleSelect = (v) => {
+    if (v === "__custom__") {
+      setCustom(true);
+      onChange("");          // clear until they type
+    } else {
+      setCustom(false);
+      onChange(v);
+    }
+  };
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-600 mb-1">{label}</label>
+      <select
+        value={custom ? "__custom__" : (value || "")}
+        onChange={(e) => handleSelect(e.target.value)}
+        className="w-full rounded-lg border border-gray-300 p-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        <option value="">Select</option>
+        {options.map((opt) => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+        <option value="__custom__">Custom… (type your own)</option>
+      </select>
+      {custom && (
+        <input
+          type="text"
+          value={value || ""}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Type shape…"
+          className="mt-2 w-full rounded-lg border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+      )}
     </div>
   );
 }

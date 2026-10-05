@@ -109,6 +109,14 @@ export default function Step3C_Misc() {
     o => !usedMolecularIsoIds.has(o.value)
   );
 
+  /* ✅ BUGFIX: handlers must read the SAME arrays the UI renders (which include
+     the seeded placeholder run), not the raw microTests[key] which is still
+     empty until the first save. Reading raw state made checkbox clicks no-op. */
+  const renderedRuns = {
+    biochemicalRuns,
+    enzymaticRuns,
+  };
+
   const [openAntibacterial, setOpenAntibacterial] = useState(true);
   const [openAntimalarial, setOpenAntimalarial]   = useState(true);
   const [openBio,      setOpenBio]      = useState(true);
@@ -172,7 +180,7 @@ export default function Step3C_Misc() {
     const firstId   = linkOptions[0]?.value || "";
     const nextIndex = getNextBiochemicalIndex(biochemicalRuns, firstId);
     const testId    = firstId ? generateBiochemicalId(firstId, nextIndex) : "";
-    const current   = microTests.biochemicalRuns || [createTestRun()];
+    const current   = biochemicalRuns;
     updateMicroTests({ biochemicalRuns: [...current, createTestRun(firstId, testId)] });
   };
 
@@ -184,7 +192,7 @@ export default function Step3C_Misc() {
   };
 
   const updateBiochemicalRun = (id, field, value) => {
-    const current = microTests.biochemicalRuns || [];
+    const current = biochemicalRuns;
     const updated = current.map(r => r.id !== id ? r : { ...r, [field]: value });
     const final   = field === "linkedId" ? regenIds(updated, generateBiochemicalId) : updated;
     updateMicroTests({ biochemicalRuns: final });
@@ -195,7 +203,7 @@ export default function Step3C_Misc() {
     const firstId   = linkOptions[0]?.value || "";
     const nextIndex = getNextEnzymaticIndex(enzymaticRuns, firstId);
     const testId    = firstId ? generateEnzymaticId(firstId, nextIndex) : "";
-    const current   = microTests.enzymaticRuns || [createTestRun()];
+    const current   = enzymaticRuns;
     updateMicroTests({ enzymaticRuns: [...current, createTestRun(firstId, testId)] });
   };
 
@@ -207,7 +215,7 @@ export default function Step3C_Misc() {
   };
 
   const updateEnzymaticRun = (id, field, value) => {
-    const current = microTests.enzymaticRuns || [];
+    const current = enzymaticRuns;
     const updated = current.map(r => r.id !== id ? r : { ...r, [field]: value });
     const final   = field === "linkedId" ? regenIds(updated, generateEnzymaticId) : updated;
     updateMicroTests({ enzymaticRuns: final });
@@ -282,7 +290,7 @@ export default function Step3C_Misc() {
 
   /* ================= CHECKBOX HANDLERS ================= */
   const toggleCheck = (key, runId, testName) => {
-    const current = microTests[key] || [];
+    const current = renderedRuns[key] || microTests[key] || [];
     updateMicroTests({
       [key]: current.map(r => {
         if (r.id !== runId) return r;
@@ -295,7 +303,7 @@ export default function Step3C_Misc() {
   };
 
   const addCustomTest = (key, runId) => {
-    const current = microTests[key] || [];
+    const current = renderedRuns[key] || microTests[key] || [];
     updateMicroTests({
       [key]: current.map(r => r.id !== runId ? r : {
         ...r, customTests: [...(r.customTests || []), { id: crypto.randomUUID(), name: "" }]
@@ -304,7 +312,7 @@ export default function Step3C_Misc() {
   };
 
   const updateCustomTest = (key, runId, testId, value) => {
-    const current = microTests[key] || [];
+    const current = renderedRuns[key] || microTests[key] || [];
     updateMicroTests({
       [key]: current.map(r => r.id !== runId ? r : {
         ...r, customTests: r.customTests.map(t => t.id === testId ? { ...t, name: value } : t)
@@ -313,7 +321,7 @@ export default function Step3C_Misc() {
   };
 
   const removeCustomTest = (key, runId, testId) => {
-    const current = microTests[key] || [];
+    const current = renderedRuns[key] || microTests[key] || [];
     updateMicroTests({
       [key]: current.map(r => {
         if (r.id !== runId) return r;
@@ -328,7 +336,7 @@ export default function Step3C_Misc() {
   };
 
   const toggleCustomCheck = (key, runId, testId, testName) => {
-    const current = microTests[key] || [];
+    const current = renderedRuns[key] || microTests[key] || [];
     updateMicroTests({
       [key]: current.map(r => {
         if (r.id !== runId) return r;

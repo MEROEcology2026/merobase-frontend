@@ -19,12 +19,13 @@ export const PART_OF_SAMPLE_OPTIONS = [
 
 /* ================= AGAR MEDIA CODES ================= */
 export const AGAR_MEDIA_OPTIONS = [
-  { label: "AIA",           code: "AIA" },
-  { label: "ISP 2",         code: "ISP2" },
-  { label: "ISP 4",         code: "ISP4" },
-  { label: "SC",            code: "SCA" },
-  { label: "Nutrient Agar", code: "NA" },
-  { label: "Zobell Agar",   code: "ZA" },
+  { label: "AIA",                 code: "AIA" },
+  { label: "ISP 2",               code: "ISP2" },
+  { label: "ISP 4",               code: "ISP4" },
+  { label: "SC",                  code: "SCA" },
+  { label: "Nutrient Agar",       code: "NA" },
+  { label: "Zobell Agar",         code: "ZA" },
+  { label: "Tryptone Soya Agar",  code: "TSA" },   /* ✅ added */
 ];
 
 /* ================= DILUTION CODES ================= */

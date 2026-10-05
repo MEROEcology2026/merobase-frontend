@@ -273,9 +273,10 @@ export default function Step3A_PrimaryIsolated() {
                       onChange={(e) => updateField(run.id, "incubationTime", e.target.value)}
                       placeholder="e.g. 48 hours" />
 
-                    <Field label="Oxygen Requirement" value={run.oxygenRequirement}
+                    {/* ✅ #2 Oxygen Requirement — now a dropdown */}
+                    <SelectField label="Oxygen Requirement" value={run.oxygenRequirement}
                       onChange={(e) => updateField(run.id, "oxygenRequirement", e.target.value)}
-                      placeholder="e.g. Aerobic / Anaerobic" />
+                      options={["", "Aerobic", "Anaerobic", "Facultative", "Microaerophilic"]} />
                   </div>
 
                   <div>

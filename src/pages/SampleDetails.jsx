@@ -117,6 +117,7 @@ export default function SampleDetails() {
       metadata: {
         sampleId:       sample.sample_id,
         oldId:          sample.old_id || "",
+        oldProject:     sample.old_project || "",
         sampleName:     sample.sample_name,
         sampleType:     sample.sample_type,
         partOfSample:   sample.part_of_sample,
@@ -171,6 +172,7 @@ export default function SampleDetails() {
   const metadata = {
     sampleId:        sample.sample_id,
     oldId:           sample.old_id,
+    oldProject:      sample.old_project,
     sampleName:      sample.sample_name,
     sampleType:      sample.sample_type,
     partOfSample:    sample.part_of_sample,
@@ -269,6 +271,12 @@ export default function SampleDetails() {
               {sample.old_id && (
                 <span className="inline-block font-mono text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full">
                   Old ID: {sample.old_id}
+                </span>
+              )}
+              {/* Old project chip — only if present */}
+              {sample.old_project && (
+                <span className="inline-block text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full">
+                  Old project: {sample.old_project}
                 </span>
               )}
             </div>

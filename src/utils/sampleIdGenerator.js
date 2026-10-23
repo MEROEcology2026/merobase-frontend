@@ -34,6 +34,34 @@ export const DILUTION_OPTIONS = [
   { label: "10⁻³", code: "10-3" },
 ];
 
+/* ================= DIVE SITES ================= */
+// Single source of truth — Step 1 metadata and the Search/Edit dive-site
+// filters all import this list so they can never drift apart.
+export const DIVE_SITES = [
+  "USAT Liberty – Tulamben",
+  "Tulamben Drop Off",
+  "Coral Garden – Tulamben",
+  "Kubu Wall",
+  "Batu Kelebit",
+  "Secret Bay – Gilimanuk",
+  "Pemuteran Reef",
+  "Menjangan Island",
+  "Seraya Secret",
+  "MERO",
+  "Noisy Reef",
+  "Batu Niti",
+  "Melasti",
+  "Bali Dive Resort",
+  "Batu Lumbang",
+  "Emerald",
+  "Gerombong",
+  "Liberty Shipwreck",
+  "Kanna",
+  "Batu Ringgit",
+  "Bulakan",
+  "Other",
+];
+
 /* ================= SAMPLE ID ================= */
 // Format: B.A.H.01.005
 export const generateSampleId = (sampleType, projectType, partOfSample, projectNumber, sampleNumber) => {

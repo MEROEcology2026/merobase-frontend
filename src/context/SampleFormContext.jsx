@@ -13,6 +13,7 @@ const initial = {
   metadata: {
     sampleName: "",
     oldId: "",
+    oldProject: "",
     sampleType: "Biological",
     projectType: "A",
     partOfSample: "",
@@ -245,6 +246,7 @@ export function SampleFormProvider({ children }) {
     const payload = {
       sample_id:       sampleId,
       old_id:          metadata.oldId || null,
+      old_project:     metadata.oldProject || null,
       sample_name:     metadata.sampleName,
       sample_type:     metadata.sampleType,
       project_type:    metadata.projectType,

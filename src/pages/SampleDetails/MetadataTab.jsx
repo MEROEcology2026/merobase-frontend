@@ -51,6 +51,8 @@ export default function MetadataTab({ metadata }) {
             <Row label="Project type" value={metadata.projectType} />
             <Row label="Project number" value={metadata.projectNumber} />
             <Row label="Sample number" value={metadata.sampleNumber} />
+            {/* Old project — legacy project name, optional */}
+            <Row label="Old project" value={metadata.oldProject} />
           </div>
         </div>
       </div>

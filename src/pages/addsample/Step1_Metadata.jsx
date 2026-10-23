@@ -4,18 +4,9 @@ import "leaflet/dist/leaflet.css";
 import FormProgressBar from "../../components/FormProgressBar";
 import FileDropzone from "../../components/FileDropzone";
 import { useSampleForm } from "../../context/SampleFormContext";
-import { generateSampleId, PART_OF_SAMPLE_OPTIONS } from "../../utils/sampleIdGenerator";
+import { generateSampleId, PART_OF_SAMPLE_OPTIONS, DIVE_SITES } from "../../utils/sampleIdGenerator";
 
 const SAMPLE_TYPES = ["Biological", "Non-Biological"];
-const DIVE_SITES = [
-  "USAT Liberty – Tulamben", "Tulamben Drop Off", "Coral Garden – Tulamben",
-  "Kubu Wall", "Batu Kelebit", "Secret Bay – Gilimanuk",
-  "Pemuteran Reef", "Menjangan Island",
-  "Seraya Secret", "MERO", "Noisy Reef", "Batu Niti", "Melasti",
-  "Bali Dive Resort", "Batu Lumbang", "Emerald", "Gerombong",
-  "Liberty Shipwreck", "Kanna", "Batu Ringgit", "Bulakan",
-  "Other",
-];
 const SUBSTRATES = [
   "Live Coral", "Dead Coral", "Rubble", "Sand", "Mud",
   "Rock", "Seagrass", "Artificial Structure", "Other",
@@ -218,6 +209,23 @@ export default function Step1_Metadata() {
         />
         <p className="text-xs text-amber-600 mt-1.5">
           Leave blank for new samples. This does not affect the generated Sample ID above.
+        </p>
+      </div>
+
+      {/* ================= OLD PROJECT NAME (optional, legacy) ================= */}
+      <div className="rounded-xl px-5 py-4 bg-amber-50 border border-amber-200">
+        <label className="block text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">
+          Old Project Name <span className="normal-case font-normal text-amber-600">— optional, from the previous system</span>
+        </label>
+        <input
+          type="text"
+          value={metadata.oldProject || ""}
+          onChange={(e) => setValue("oldProject", e.target.value)}
+          placeholder="e.g. the project name in the old records"
+          className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-base focus:ring-2 focus:ring-amber-300 focus:outline-none"
+        />
+        <p className="text-xs text-amber-600 mt-1.5">
+          Leave blank for new samples. This does not affect the current Project Type or Number.
         </p>
       </div>
 

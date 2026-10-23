@@ -7,6 +7,7 @@ import {
 import { DateRange } from "react-date-range";
 import { useSampleFormContext } from "../context/SampleFormContext";
 import { samplesAPI } from "../services/api";
+import { DIVE_SITES } from "../utils/sampleIdGenerator";
 import { toastSuccess, toastError } from "../utils/toast";
 
 import "react-date-range/dist/styles.css";
@@ -96,10 +97,9 @@ export default function EditSample() {
     () => [...new Set(samples.map(s => s.project_type).filter(Boolean))],
     [samples]
   );
-  const diveSites = useMemo(
-    () => [...new Set(samples.map(s => s.dive_site).filter(Boolean))].sort(),
-    [samples]
-  );
+  // ✅ Dive sites use the full fixed list from metadata (shared source),
+  // so the filter always matches what Add Sample offers.
+  const diveSites = DIVE_SITES;
 
   /* ================= FILTER LOGIC ================= */
   const filteredSamples = useMemo(() => {
@@ -109,7 +109,7 @@ export default function EditSample() {
       const searchable = [
         sample.sample_name, sample.species, sample.collector_name,
         sample.dive_site, sample.kingdom, sample.project_type, sample.sample_id,
-        sample.identified_species
+        sample.identified_species, sample.old_project
       ].filter(Boolean).join(" ").toLowerCase();
 
       const matchesQuery    = searchable.includes(query.toLowerCase());
@@ -158,6 +158,7 @@ export default function EditSample() {
         metadata: {
           sampleId:        full.sample_id,
           oldId:           full.old_id || "",
+          oldProject:      full.old_project || "",
           sampleName:      full.sample_name,
           sampleType:      full.sample_type,
           partOfSample:    full.part_of_sample,
@@ -400,6 +401,11 @@ function SpecimenRow({ s, onDetails, onEdit, onDelete, isAdmin }) {
         {s.old_id && (
           <span className="font-mono text-[11px] text-amber-700 break-all block mt-0.5">
             Old: {s.old_id}
+          </span>
+        )}
+        {s.old_project && (
+          <span className="text-[11px] text-amber-700 break-all block mt-0.5">
+            Old project: {s.old_project}
           </span>
         )}
       </div>

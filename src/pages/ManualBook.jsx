@@ -174,7 +174,7 @@ function IDSystem() {
           color="blue"
           parts={[
             { code:"B",   desc:"Sample type — B = Biological, NB = Non-Biological" },
-            { code:"A",   desc:"Project type — A or B" },
+            { code:"A",   desc:"Project type — A = MERO-managed (internal), B = external collaborator / third-party project" },
             { code:"H",   desc:"Part of sample — H = Head (see table below)" },
             { code:"01",  desc:"Project number — zero padded to 2 digits" },
             { code:"005", desc:"Sample number — zero padded to 3 digits" },
@@ -194,6 +194,39 @@ function IDSystem() {
             </div>
           ))}
         </div>
+        <Note>
+          <strong>Project type — A vs B:</strong>
+          <br/>• <strong>A</strong> — a project managed by MERO (internal).
+          <br/>• <strong>B</strong> — a project managed by an external collaborator or third party.
+        </Note>
+      </Section>
+
+      {/* ================= LEGACY FIELDS (OLD ID / OLD PROJECT) ================= */}
+      <Section title="Legacy fields — Old ID & Old Project">
+        <p className="text-gray-600 leading-relaxed mb-4">
+          When importing older data from the previous system, two optional fields
+          let you keep the original references alongside the new MEROBase ID. Both
+          are typed manually, both are optional, and neither affects the
+          auto-generated Sample ID.
+        </p>
+        <div className="space-y-3">
+          <div className="flex items-start gap-3 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+            <span className="font-mono text-xs font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded flex-shrink-0">Old ID</span>
+            <p className="text-xs text-gray-600">
+              The sample's identifier in the old/previous system. Searchable, and
+              shown on Sample Details and the Search/Edit lists. Leave blank for new samples.
+            </p>
+          </div>
+          <div className="flex items-start gap-3 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+            <span className="font-mono text-xs font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded flex-shrink-0">Old Project</span>
+            <p className="text-xs text-gray-600">
+              The project name as recorded in the old system (separate from the
+              current Project Type A/B and project number). Searchable, and shown
+              on Sample Details and the lists. Leave blank for new samples.
+            </p>
+          </div>
+        </div>
+        <Note>Both fields are entered in <strong>Step 1 — Metadata</strong>, just below the auto-generated Sample ID.</Note>
       </Section>
 
       {/* ================= MORPHOLOGY ID ================= */}
@@ -224,7 +257,7 @@ function IDSystem() {
             parts={[
               { code:"B.A.H.01.005", desc:"Parent sample ID" },
               { code:"FNG",          desc:"Isolated type — FNG = Fungi, BCT = Bacteria" },
-              { code:"NA",           desc:"Agar media — NA = Nutrient Agar (AIA, ISP2, ISP4, SCA, NA, ZA)" },
+              { code:"NA",           desc:"Agar media — NA = Nutrient Agar (AIA, ISP2, ISP4, SCA, NA, ZA, TSA)" },
               { code:"10-2",         desc:"Dilution — 10-2 or 10-3" },
               { code:"ISO-01",       desc:"Global counter — increments per sample regardless of type or agar" },
             ]}
@@ -283,6 +316,30 @@ function IDSystem() {
             <br/>• ISO-02.ABSY-01 → counter resets because different linked ISO
           </Note>
         </SubSection>
+
+        {/* ── Molecular Identification ID (MOLID) ── */}
+        <SubSection title="Molecular Identification ID (MOLID)">
+          <p className="text-sm text-gray-600 mb-4">
+            Within microbiology you can record a molecular identification for an
+            isolate. It links to a Primary Isolated (ISO) entry and adds the
+            <span className="font-mono"> .MOLID</span> suffix — one per isolate.
+            This is where the species name from sequencing is recorded.
+          </p>
+          <IDCard
+            id="B.A.H.01.005.FNG.NA.10-2.ISO-01.MOLID"
+            color="amber"
+            parts={[
+              { code:"B.A.H.01.005.FNG.NA.10-2.ISO-01", desc:"Parent isolated ID" },
+              { code:"MOLID", desc:"Fixed suffix — no number, one molecular identification per ISO" },
+            ]}
+          />
+          <Note>
+            This is <strong>not</strong> the same as the independent Molecular ID
+            (<span className="font-mono">.MOL</span>, Step 4). MOLID lives inside
+            microbiology and is tied to a specific isolate; its species name feeds
+            the "Microbiology molecular identification" row on Sample Details.
+          </Note>
+        </SubSection>
       </Section>
 
       {/* ================= MOLECULAR ID ================= */}
@@ -312,6 +369,7 @@ function IDSystem() {
             { indent:3, id:"B.A.H.01.005.FNG.NA.10-2.ISO-01.AASY-01",  label:"Antimalarial",        color:"#F59E0B" },
             { indent:3, id:"B.A.H.01.005.FNG.NA.10-2.ISO-01.BT-01",    label:"Biochemical",         color:"#F59E0B" },
             { indent:3, id:"B.A.H.01.005.FNG.NA.10-2.ISO-01.EBT-01",   label:"Enzymatic",           color:"#F59E0B" },
+            { indent:3, id:"B.A.H.01.005.FNG.NA.10-2.ISO-01.MOLID",    label:"Molecular ID",        color:"#F59E0B" },
             { indent:2, id:"B.A.H.01.005.BCT.ISP2.10-3.ISO-02",         label:"Primary Isolated",    color:"#8B5CF6" },
             { indent:3, id:"B.A.H.01.005.BCT.ISP2.10-3.ISO-02.ISOMOR", label:"Isolated Morphology", color:"#8B5CF6" },
             { indent:3, id:"B.A.H.01.005.BCT.ISP2.10-3.ISO-02.ABSY-01",label:"Antibacterial",       color:"#F59E0B" },
@@ -353,7 +411,7 @@ function AddSample() {
       <Section title="The wizard steps">
         <div className="space-y-3">
           {[
-            { step:"Step 1",  title:"Metadata",             desc:"Fill in the core sample information — sample type, project, part of sample, collection site, collector name, GPS coordinates, taxonomy and storage. The Sample ID is generated automatically as you fill in the required fields." },
+            { step:"Step 1",  title:"Metadata",             desc:"Fill in the core sample information — sample type, project, part of sample, collection site, collector name, GPS coordinates, taxonomy and storage. The Sample ID is generated automatically as you fill in the required fields. Optional legacy fields (Old ID and Old Project) let you record references from the previous system." },
             { step:"Step 2",  title:"Morphology",           desc:"Upload SEM and microscope photos and add morphology notes. A Morphology ID (B.A.H.01.005.MOR) is generated automatically and is independent of the microbiology chain." },
             { step:"Step 3A", title:"Primary Isolated",     desc:"Add one or more isolated entries. Select isolated type (Fungi or Bacteria), agar media and dilution. Each entry gets a unique ISO ID." },
             { step:"Step 3B", title:"Isolated Morphology",  desc:"Link each Primary Isolated entry to one Isolated Morphology entry. The rule is strict — one ISO can only have one ISOMOR. The system blocks duplicate links automatically." },
@@ -481,6 +539,10 @@ function FAQ() {
     {
       q: "What are MOR and MOL IDs?",
       a: "B.A.H.01.005.MOR is the Morphology ID and B.A.H.01.005.MOL is the Molecular ID. Both are auto-generated and completely independent — they do not connect to the microbiology chain."
+    },
+    {
+      q: "What are the Old ID and Old Project fields?",
+      a: "They are optional fields for legacy data imported from the previous system. Old ID holds the sample's previous identifier, and Old Project holds the previous project name. Both are typed manually in Step 1, are searchable, and appear on Sample Details and the Search/Edit lists. Neither affects the auto-generated MEROBase Sample ID — leave them blank for new samples."
     },
     {
       q: "Can I delete a sample?",

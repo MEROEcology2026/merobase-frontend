@@ -1,5 +1,12 @@
 import { ImageGrid } from "./SharedComponents";
 
+/* Display a measurement with a comma decimal (2.5 → "2,5"). Returns null when
+   there is no value, but keeps 0 (a real reading like 0 m / 0 °C). */
+const comma = (v, unit = "") => {
+  if (v === null || v === undefined || v === "") return null;
+  return `${String(v).replace(".", ",")}${unit}`;
+};
+
 export default function MetadataTab({ metadata }) {
   if (!metadata) return null;
 
@@ -23,10 +30,12 @@ export default function MetadataTab({ metadata }) {
             <Row label="Dive site" value={metadata.diveSite} />
             <Row label="Collection date" value={metadata.collectionDate} />
             <Row label="Collector" value={metadata.collectorName} />
-            <Row label="Depth" value={metadata.depth ? `${metadata.depth} m` : null} />
-            <Row label="Temperature" value={metadata.temperature ? `${metadata.temperature}°C` : null} />
+            <Row label="Depth" value={comma(metadata.depth, " m")} />
+            <Row label="Temperature" value={comma(metadata.temperature, "°C")} />
+            <Row label="pH" value={comma(metadata.ph)} />
+            <Row label="DO" value={comma(metadata.do, " mg/L")} />
             <Row label="Substrate" value={metadata.substrate} />
-            <Row label="Sample length" value={metadata.sampleLength ? `${metadata.sampleLength} cm` : null} />
+            <Row label="Sample length" value={comma(metadata.sampleLength, " cm")} />
             <Row label="Storage location" value={metadata.storageLocation} />
           </div>
         </div>

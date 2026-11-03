@@ -8,6 +8,19 @@ import { generateSampleId } from "../utils/sampleIdGenerator";
 
 const SampleFormContext = createContext(null);
 
+/* ================= NUMERIC NORMALIZER ================= */
+// Measurements (depth, temperature, sample length) may be typed with a comma
+// decimal (Indonesian convention, e.g. "2,5"). Convert comma → dot and return
+// a clean numeric value. Keeps 0 (does NOT null it out). Returns null only when
+// the field is truly empty or not a valid number.
+const numOrNull = (v) => {
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim().replace(",", ".");
+  if (s === "") return null;
+  const n = Number(s);
+  return Number.isNaN(n) ? null : n;
+};
+
 /* ================= INITIAL STRUCTURE ================= */
 const initial = {
   metadata: {
@@ -30,6 +43,8 @@ const initial = {
     collectionDate: "",
     latitude: "",
     longitude: "",
+    ph: "",
+    do: "",
     samplePhoto: null,
     samplePhotoName: ""
   },
@@ -263,10 +278,12 @@ export function SampleFormProvider({ children }) {
       genus:           metadata.genus,
       family:          metadata.family,
       species:         metadata.species,
-      depth:           metadata.depth || null,
-      temperature:     metadata.temperature || null,
+      depth:           numOrNull(metadata.depth),
+      temperature:     numOrNull(metadata.temperature),
       substrate:       metadata.substrate,
-      sample_length:   metadata.sampleLength || null,
+      sample_length:   numOrNull(metadata.sampleLength),
+      ph:              numOrNull(metadata.ph),
+      dissolved_oxygen: numOrNull(metadata.do),
       morphology,
       microbiology:    cleanedMicrobiology,
       molecular,

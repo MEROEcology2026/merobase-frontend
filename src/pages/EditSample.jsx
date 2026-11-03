@@ -179,6 +179,8 @@ export default function EditSample() {
           temperature:     full.temperature,
           substrate:       full.substrate,
           sampleLength:    full.sample_length,
+          ph:              full.ph,
+          do:              full.dissolved_oxygen,
         },
         morphology:   full.morphology   || {},
         microbiology: full.microbiology || {},

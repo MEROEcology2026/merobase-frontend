@@ -34,6 +34,12 @@ const MICRO_SUBTABS = [
 
 const SERIF = { fontFamily: "Georgia, 'Times New Roman', serif" };
 
+/* Display a measurement with a comma decimal (2.5 → "2,5"), keeping 0. */
+const comma = (v) => {
+  if (v === null || v === undefined || v === "") return null;
+  return String(v).replace(".", ",");
+};
+
 /* ================= SPECIES SOURCE HELPERS ================= */
 // Collects distinct molecular species names, supporting both the new array
 // shape and the old single-object shape. Never overwrites — returns all.
@@ -138,6 +144,8 @@ export default function SampleDetails() {
         temperature:    sample.temperature,
         substrate:      sample.substrate,
         sampleLength:   sample.sample_length,
+        ph:             sample.ph,
+        do:             sample.dissolved_oxygen,
       },
       morphology:   sample.morphology   || {},
       microbiology: sample.microbiology || {},
@@ -193,6 +201,8 @@ export default function SampleDetails() {
     temperature:     sample.temperature,
     substrate:       sample.substrate,
     sampleLength:    sample.sample_length,
+    ph:              sample.ph,
+    do:              sample.dissolved_oxygen,
   };
 
   const isolatedRuns = sample.microbiology?.primaryIsolatedRuns || [];
@@ -324,9 +334,9 @@ export default function SampleDetails() {
 
           {/* KPI strip */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-gray-100 rounded-xl overflow-hidden border border-gray-100">
-            <KPI label="Depth"           value={sample.depth        ? `${sample.depth} m`          : "—"} />
-            <KPI label="Temperature"     value={sample.temperature  ? `${sample.temperature}°C`    : "—"} />
-            <KPI label="Sample length"   value={sample.sample_length? `${sample.sample_length} cm` : "—"} />
+            <KPI label="Depth"           value={comma(sample.depth) != null        ? `${comma(sample.depth)} m`          : "—"} />
+            <KPI label="Temperature"     value={comma(sample.temperature) != null  ? `${comma(sample.temperature)}°C`    : "—"} />
+            <KPI label="Sample length"   value={comma(sample.sample_length) != null ? `${comma(sample.sample_length)} cm` : "—"} />
             <KPI label="Isolated entries" value={isolatedRuns.length > 0
               ? `${isolatedRuns.length} ${isolatedRuns.length === 1 ? "entry" : "entries"}`
               : "None"} />

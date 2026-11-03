@@ -270,14 +270,18 @@ export default function Step1_Metadata() {
             onChange={(v) => setValue("sampleName", v)} />
           <Input label="Sample Number" value={metadata.sampleNumber || ""}
             onChange={(v) => setValue("sampleNumber", v)} />
-          <Input label="Sample Length (cm)" type="number"
+          <Input label="Sample Length (cm)" decimal
             value={metadata.sampleLength || ""} onChange={(v) => setValue("sampleLength", v)} />
           <Select label="Dive Site" value={metadata.diveSite || ""}
             onChange={(v) => setValue("diveSite", v)} options={DIVE_SITES} />
-          <Input label="Depth (m)" type="number"
+          <Input label="Depth (m)" decimal
             value={metadata.depth || ""} onChange={(v) => setValue("depth", v)} />
-          <Input label="Temperature (°C)" type="number"
+          <Input label="Temperature (°C)" decimal
             value={metadata.temperature || ""} onChange={(v) => setValue("temperature", v)} />
+          <Input label="pH" decimal
+            value={metadata.ph || ""} onChange={(v) => setValue("ph", v)} />
+          <Input label="DO — Dissolved Oxygen (mg/L)" decimal
+            value={metadata.do || ""} onChange={(v) => setValue("do", v)} />
           <Select label="Substrate" value={metadata.substrate || ""}
             onChange={(v) => setValue("substrate", v)} options={SUBSTRATES} />
           <Select label="Project Type" value={metadata.projectType || ""}
@@ -451,7 +455,35 @@ function Grid({ children }) {
   return <div className="grid grid-cols-1 md:grid-cols-2 gap-6">{children}</div>;
 }
 
-function Input({ label, value, onChange, type = "text", full }) {
+function Input({ label, value, onChange, type = "text", decimal, full }) {
+  /* ✅ decimal mode — accepts comma OR dot as the decimal separator (e.g. 2,5),
+     keeps the numeric keypad on mobile, and blocks letters. Stays a text input
+     so the comma is not rejected the way type="number" rejects it. */
+  const handleDecimal = (raw) => {
+    // allow only digits, one separator (, or .), and a leading minus
+    let cleaned = raw.replace(/[^\d.,-]/g, "");
+    // keep just the first separator; drop any extras
+    const firstSep = cleaned.search(/[.,]/);
+    if (firstSep !== -1) {
+      const head = cleaned.slice(0, firstSep + 1);
+      const tail = cleaned.slice(firstSep + 1).replace(/[.,]/g, "");
+      cleaned = head + tail;
+    }
+    onChange(cleaned);
+  };
+
+  if (decimal) {
+    return (
+      <div className={full ? "md:col-span-2" : ""}>
+        <label className="block text-sm mb-1">{label}</label>
+        <input type="text" inputMode="decimal" value={value}
+          onChange={(e) => handleDecimal(e.target.value)}
+          placeholder="e.g. 2,5"
+          className="w-full rounded-lg border px-3 py-2 text-base" />
+      </div>
+    );
+  }
+
   return (
     <div className={full ? "md:col-span-2" : ""}>
       <label className="block text-sm mb-1">{label}</label>

@@ -50,6 +50,7 @@ export const DIVE_SITES = [
   "MERO",
   "Noisy Reef",
   "Batu Niti",
+  "Batu Niti Slope",
   "Melasti",
   "Bali Dive Resort",
   "Batu Lumbang",

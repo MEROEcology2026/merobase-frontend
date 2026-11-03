@@ -245,6 +245,7 @@ export default function Step1_Metadata() {
       {/* ================= GENERAL INFO ================= */}
       <Box title="General Sample Information" open={open.general} toggle={() => toggle("general")}>
         <Grid>
+          {/* ── ID-building fields first, in the order they build B.A.H.01.005 ── */}
           <Select label="Sample Type" value={metadata.sampleType || ""}
             onChange={(v) => setValue("sampleType", v)} options={SAMPLE_TYPES} />
 
@@ -266,12 +267,27 @@ export default function Step1_Metadata() {
             </select>
           </div>
 
-          <Input label="Sample Name" value={metadata.sampleName || ""}
-            onChange={(v) => setValue("sampleName", v)} />
+          <Select label="Project Type" value={metadata.projectType || ""}
+            onChange={(v) => setValue("projectType", v)} options={["A", "B"]} />
+          <Input label="Project Number" value={metadata.projectNumber || ""}
+            onChange={(v) => setValue("projectNumber", v)} />
           <Input label="Sample Number" value={metadata.sampleNumber || ""}
             onChange={(v) => setValue("sampleNumber", v)} />
+
+          {/* ── Sample identity ── */}
+          <Input label="Sample Name" value={metadata.sampleName || ""}
+            onChange={(v) => setValue("sampleName", v)} />
           <Input label="Sample Length (cm)" decimal
             value={metadata.sampleLength || ""} onChange={(v) => setValue("sampleLength", v)} />
+
+          {/* ── Collection ── */}
+          <Input label="Collector Name" value={metadata.collectorName || ""}
+            onChange={(v) => setValue("collectorName", v)} />
+          <Input label="Collection Date" type="date"
+            value={metadata.collectionDate || ""}
+            onChange={(v) => setValue("collectionDate", v)} />
+
+          {/* ── Site & environment readings grouped together ── */}
           <Select label="Dive Site" value={metadata.diveSite || ""}
             onChange={(v) => setValue("diveSite", v)} options={DIVE_SITES} />
           <Input label="Depth (m)" decimal
@@ -284,15 +300,6 @@ export default function Step1_Metadata() {
             value={metadata.do || ""} onChange={(v) => setValue("do", v)} />
           <Select label="Substrate" value={metadata.substrate || ""}
             onChange={(v) => setValue("substrate", v)} options={SUBSTRATES} />
-          <Select label="Project Type" value={metadata.projectType || ""}
-            onChange={(v) => setValue("projectType", v)} options={["A", "B"]} />
-          <Input label="Project Number" value={metadata.projectNumber || ""}
-            onChange={(v) => setValue("projectNumber", v)} />
-          <Input label="Collection Date" type="date"
-            value={metadata.collectionDate || ""}
-            onChange={(v) => setValue("collectionDate", v)} />
-          <Input label="Collector Name" value={metadata.collectorName || ""}
-            onChange={(v) => setValue("collectorName", v)} />
         </Grid>
       </Box>
 
